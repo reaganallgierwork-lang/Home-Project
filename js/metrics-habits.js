@@ -61,7 +61,7 @@ function activeRange(habit) {
 registerSource({
   id: 'habits',
   label: 'Habits',
-  icon: '✓',
+  icon: 'logMark',
 
   list(state) {
     const metrics = [];
@@ -70,7 +70,7 @@ registerSource({
     metrics.push({
       id: 'day:score',
       group: 'Your day overall',
-      groupIcon: '📊',
+      groupIcon: 'chartLine',
       label: 'Daily score',
       unit: 'pts',
       defaultAgg: 'avg',
@@ -88,7 +88,7 @@ registerSource({
     metrics.push({
       id: 'day:complete',
       group: 'Your day overall',
-      groupIcon: '📊',
+      groupIcon: 'chartLine',
       label: 'Clean-sweep days',
       unit: '%',
       scale: 100,
@@ -115,7 +115,7 @@ registerSource({
         metrics.push({
           id: `habit:${h.id}:amount`,
           group: h.name,
-          groupIcon: h.emoji,
+          groupIcon: h.icon || h.emoji,
           label: isCounter ? `Amount logged` : 'Rating',
           unit: isCounter ? (h.unit || '') : '/ 5',
           precision: isCounter ? 0 : 1,
@@ -141,7 +141,7 @@ registerSource({
       metrics.push({
         id: `habit:${h.id}:done`,
         group: h.name,
-        groupIcon: h.emoji,
+        groupIcon: h.icon || h.emoji,
         label: 'Consistency',
         unit: '%',
         scale: 100,
@@ -162,7 +162,7 @@ registerSource({
       metrics.push({
         id: `habit:${h.id}:points`,
         group: h.name,
-        groupIcon: h.emoji,
+        groupIcon: h.icon || h.emoji,
         label: 'Points earned',
         unit: 'pts',
         precision: 0,
@@ -191,7 +191,7 @@ export function habitTableColumns(state) {
   const cols = (state.habits || []).filter((h) => !h.archived).map((h) => ({
     id: h.id,
     label: h.name,
-    icon: h.emoji,
+    icon: h.icon || h.emoji,
     /* The raw thing you entered, formatted for reading. */
     get: (s, day) => {
       const v = s.log[day]?.[h.id];
@@ -210,7 +210,7 @@ export function habitTableColumns(state) {
   cols.push({
     id: '__score',
     label: 'Day score',
-    icon: '📊',
+    icon: 'chartLine',
     get: (s, day) => {
       const d = scored(s).byDay[day];
       return d ? String(Math.round(d.total)) : null;

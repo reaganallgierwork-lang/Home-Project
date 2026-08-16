@@ -24,6 +24,7 @@ import './metrics-habits.js';          // registers the habits metric source
 import './metrics-workouts.js';        // registers the training metric source
 import { renderAnalyze } from './analyze.js';
 import { renderTrain } from './train.js';
+import { icon, PICKER_ICONS, hasIcon } from './icons.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (id) => document.getElementById(id);
@@ -36,6 +37,9 @@ let current = 'today';
 let R = null; // the latest computed result
 
 const round = (n) => Math.round(n);
+/* A habit's glyph: an icon key when we have one, otherwise whatever character
+   the habit was saved with, so nothing ever renders blank. */
+const glyph = (h, size = 20) => icon(h.icon || h.emoji, size);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /* ============================================================================
@@ -44,13 +48,13 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 
 /* The tab bar and the screens, in order. Add to this list to add a tab. */
 const SCREENS = [
-  { id: 'today', label: 'Log', icon: '✓', render: (s) => renderToday(s) },
-  { id: 'train', label: 'Train', icon: '🏋️', render: (s) => renderTrain(s) },
-  { id: 'streaks', label: 'Streaks', icon: '🔥', render: (s) => renderStreaks(s) },
-  { id: 'tiers', label: 'Tiers', icon: '🪜', render: (s) => renderTiers(s) },
-  { id: 'badges', label: 'Badges', icon: '🏅', render: (s) => renderBadges(s) },
-  { id: 'history', label: 'History', icon: '📈', render: (s) => renderHistory(s) },
-  { id: 'analyze', label: 'Data', icon: '🔎', render: (s) => renderAnalyze(s, refresh) },
+  { id: 'today', label: 'Log', icon: 'logMark', render: (s) => renderToday(s) },
+  { id: 'train', label: 'Train', icon: 'dumbbell', render: (s) => renderTrain(s) },
+  { id: 'streaks', label: 'Streaks', icon: 'flame', render: (s) => renderStreaks(s) },
+  { id: 'tiers', label: 'Tiers', icon: 'steps', render: (s) => renderTiers(s) },
+  { id: 'badges', label: 'Badges', icon: 'shield', render: (s) => renderBadges(s) },
+  { id: 'history', label: 'History', icon: 'chartLine', render: (s) => renderHistory(s) },
+  { id: 'analyze', label: 'Data', icon: 'analyze', render: (s) => renderAnalyze(s, refresh) },
 ];
 
 export function start() {
@@ -76,7 +80,7 @@ function buildShell() {
   app.innerHTML = SCREENS.map((s) => `<section class="screen${s.id === current ? ' active' : ''}" id="screen-${s.id}"></section>`).join('');
   nav.innerHTML = SCREENS.map((s) => `
     <button data-tab="${s.id}" class="${s.id === current ? 'active' : ''}">
-      <span class="ico">${s.icon}</span>${s.label}
+      <span class="ico">${icon(s.icon, 21)}</span>${s.label}
     </button>`).join('');
 }
 
@@ -121,12 +125,12 @@ function renderToday(state) {
   /* --- header: which day am I looking at --- */
   const head = `
     <div class="dayhead">
-      <button class="nav" id="dayPrev" aria-label="Previous day">‹</button>
+      <button class="nav" id="dayPrev" aria-label="Previous day">${icon('chevronLeft', 18)}</button>
       <div class="label">
         <b>${isToday ? 'Today' : store.dayLabel(viewDay, { weekday: 'long' })}</b>
         <span>${store.dayLabel(viewDay, { month: 'long', day: 'numeric' })}${isToday ? '' : ' · catching up'}</span>
       </div>
-      <button class="nav" id="dayNext" aria-label="Next day" ${isToday ? 'disabled' : ''}>›</button>
+      <button class="nav" id="dayNext" aria-label="Next day" ${isToday ? 'disabled' : ''}>${icon('chevronRight', 18)}</button>
     </div>`;
 
   /* --- the score ring --- */
@@ -135,7 +139,7 @@ function renderToday(state) {
       <div class="ring">
         <svg width="108" height="108" viewBox="0 0 108 108">
           <defs><linearGradient id="scoreGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#ff8a4c"/><stop offset="0.55" stop-color="#ffb454"/><stop offset="1" stop-color="#5cffc0"/>
+            <stop offset="0" stop-color="#8A6410"/><stop offset="0.5" stop-color="#D4AF37"/><stop offset="1" stop-color="#F0D67A"/>
           </linearGradient></defs>
           <circle class="track" cx="54" cy="54" r="46" fill="none" stroke-width="9"/>
           <circle class="fill" cx="54" cy="54" r="46" fill="none" stroke-width="9" stroke-linecap="round"
@@ -146,7 +150,7 @@ function renderToday(state) {
       <div class="scoremeta">
         <div class="headline">${esc(dayHeadline(d, isToday))}</div>
         <div class="note">${esc(dayNote(d, state, isToday))}</div>
-        ${d.reclaimed > 0.01 ? `<div class="reclaim-chip">↩︎ +${round(d.reclaimed)} reclaimed</div>` : ''}
+        ${d.reclaimed > 0.01 ? `<div class="reclaim-chip">+${round(d.reclaimed)} reclaimed</div>` : ''}
       </div>
     </div>`;
 
@@ -183,18 +187,18 @@ function renderToday(state) {
       const unitTxt = h.unit ? ` ${esc(h.unit)}` : '';
       control = `
         <div class="counter" data-habit="${h.id}" data-max="${h.max}" data-step="${h.step}">
-          <button class="ctr-btn minus" data-dir="-1" aria-label="Remove a ${esc(stepWord)}">−</button>
+          <button class="ctr-btn minus" data-dir="-1" aria-label="Remove a ${esc(stepWord)}">${icon('minus', 18)}</button>
           <div class="fill">
             <div class="lbl"><b>${cups} ${esc(stepWordPlural)}</b><span>${amt}${unitTxt} of ${h.max}${unitTxt}</span></div>
             <div class="bar ${row.success ? 'good' : ''}"><i style="width:${(Math.min(1, amt / h.max) * 100).toFixed(1)}%"></i></div>
           </div>
-          <button class="ctr-btn plus ${amt >= h.max ? 'maxed' : ''}" data-dir="1" aria-label="Add a ${esc(stepWord)}">+</button>
+          <button class="ctr-btn plus ${amt >= h.max ? 'maxed' : ''}" data-dir="1" aria-label="Add a ${esc(stepWord)}">${icon('plus', 18)}</button>
         </div>`;
     } else if (h.type === 'scale') {
       control = `<div class="scale" data-habit="${h.id}">${[1, 2, 3, 4, 5].map((n) => `
           <button data-val="${n}" class="${row.value === n ? `on ${n < h.threshold ? 'low' : ''}` : ''}">${n}</button>`).join('')}</div>`;
     } else {
-      control = `<button class="check ${row.success ? 'on' : ''}" data-habit="${h.id}" aria-label="${esc(h.name)}">✓</button>`;
+      control = `<button class="check ${row.success ? 'on' : ''}" data-habit="${h.id}" aria-label="${esc(h.name)}">${icon('check', 22)}</button>`;
     }
 
     /* On today we show the live streak; on a past day, the streak as it stood
@@ -206,7 +210,7 @@ function renderToday(state) {
        below, so there's nothing to repeat here — only ratings need it. */
     const meta = [
       `<span class="${boosted ? 'up' : 'pts'}">${round(row.available)} pts</span>`,
-      streakNow > 0 ? `<span class="flame">🔥 ${streakNow}</span>` : '',
+      streakNow > 0 ? `<span class="flame">${icon('flame', 12)}${streakNow}</span>` : '',
       h.type === 'scale' && h.inputStyle !== 'counter' ? `<span>${row.value ? `rated ${row.value}/5` : 'rate 1–5'}</span>` : '',
     ].filter(Boolean).join('');
 
@@ -214,7 +218,7 @@ function renderToday(state) {
        row below the name — the same layout need, so they share the class. */
     return `
       <div class="habit ${row.success ? 'done' : ''} ${boosted ? 'boosted' : ''} ${h.type === 'scale' ? 'scaled' : ''}">
-        <div class="emoji">${esc(h.emoji)}</div>
+        <div class="emoji">${glyph(h)}</div>
         <div class="body"><div class="name">${esc(h.name)}</div><div class="meta">${meta}</div></div>
         ${control}
       </div>${note}`;
@@ -223,10 +227,10 @@ function renderToday(state) {
   el('screen-today').innerHTML = `
     <div class="topbar">
       <h1>Daily log<div class="sub">${state.habits.filter((h) => !h.archived).length} habits · ${round(pot)} points a day</div></h1>
-      <button class="icon-btn" id="openSettings" aria-label="Settings">⚙︎</button>
+      <button class="icon-btn" id="openSettings" aria-label="Settings">${icon('gear', 19)}</button>
     </div>
     ${head}${score}
-    ${d.rows.length ? rows : '<div class="empty"><div class="big">🌱</div>No habits yet. Open settings to add your first one.</div>'}
+    ${d.rows.length ? rows : `<div class="empty"><div class="big">${icon('target', 34)}</div>No habits yet. Open settings to add your first one.</div>`}
     ${miniTier(R)}
   `;
 
@@ -344,7 +348,7 @@ function renderStreaks(state) {
 
     return `
       <div class="streak ${cls}">
-        <div class="emoji">${esc(h.emoji)}</div>
+        <div class="emoji">${glyph(h, 18)}</div>
         <div class="body">
           <div class="name">${esc(h.name)}</div>
           <div class="sub">${esc(sub)}</div>
@@ -366,7 +370,7 @@ function renderStreaks(state) {
         <div class="stat"><b>${round(R.month?.percentOfMax * 100 || 0)}%</b><span>Month so far</span></div>
       </div>
     </div>
-    ${active.length ? cards : '<div class="empty"><div class="big">🌱</div>No habits yet.</div>'}
+    ${active.length ? cards : `<div class="empty"><div class="big">${icon('target', 34)}</div>No habits yet.</div>`}
     <div class="section-title">Last 14 days</div>
     <div class="card tight"><div class="hint">
       <span style="color:var(--good)">■</span> done ·
@@ -430,8 +434,8 @@ function renderTiers(state) {
   el('screen-tiers').innerHTML = `
     <div class="topbar">
       <h1>${esc(store.monthLabel(m.key))}<div class="sub">${round(m.total)} of ${round(m.maxPossible)} possible${m.isCurrent ? ` · ${daysLeft} days left` : ''}</div></h1>
-      <button class="icon-btn" id="tierPrev" aria-label="Previous month">‹</button>
-      <button class="icon-btn" id="tierNext" aria-label="Next month">›</button>
+      <button class="icon-btn" id="tierPrev" aria-label="Previous month">${icon('chevronLeft', 18)}</button>
+      <button class="icon-btn" id="tierNext" aria-label="Next month">${icon('chevronRight', 18)}</button>
     </div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px">
@@ -521,7 +525,7 @@ function renderBadges(state) {
 
     ${inPlay.length ? `<div class="section-title">This month, still in play</div><div class="badge-grid">${inPlay.map(cell).join('')}</div>` : ''}
     ${permanent.length ? `<div class="section-title">Kept forever</div><div class="badge-grid">${permanent.map(cell).join('')}</div>`
-      : '<div class="empty"><div class="big">🏅</div>No badges banked yet. Finish a month above the first tier and it lands here permanently.</div>'}
+      : `<div class="empty"><div class="big">${icon('shield', 34)}</div>No badges banked yet. Finish a month above the first tier and it lands here permanently.</div>`}
 
     <div class="section-title">Still to find</div>
     <div class="badge-grid">
@@ -589,8 +593,8 @@ function renderHistory(state) {
     <div class="card">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">
         <h2 style="flex:1">${esc(store.monthLabel(m.key))}</h2>
-        <button class="icon-btn" id="calPrev">‹</button>
-        <button class="icon-btn" id="calNext">›</button>
+        <button class="icon-btn" id="calPrev" aria-label="Previous month">${icon('chevronLeft', 18)}</button>
+        <button class="icon-btn" id="calNext" aria-label="Next month">${icon('chevronRight', 18)}</button>
       </div>
       <div class="cal">
         ${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d) => `<div class="dow">${d}</div>`).join('')}
@@ -616,15 +620,15 @@ function openSettings() {
 
   const habitRows = state.habits.map((h, i) => `
     <div class="weight-row" data-id="${h.id}" style="${h.archived ? 'opacity:.5' : ''}">
-      <div class="emoji">${esc(h.emoji)}</div>
+      <div class="emoji">${glyph(h, 18)}</div>
       <div class="body">
         <div class="name">${esc(h.name)}${h.archived ? ' · retired' : ''}</div>
         <div class="share">${h.archived ? 'not counted' : `${((h.weight / sumBase) * s.dailyTotal).toFixed(1)} points a day · weight ${h.weight}`}</div>
         ${h.archived ? '' : `<input type="range" min="1" max="40" value="${h.weight}" data-w="${h.id}">`}
       </div>
       <div class="tools">
-        <button data-up="${h.id}" ${i === 0 ? 'disabled style="opacity:.3"' : ''}>↑</button>
-        <button data-edit="${h.id}">✎</button>
+        <button data-up="${h.id}" ${i === 0 ? 'disabled style="opacity:.3"' : ''} aria-label="Move up">${icon('arrowUp', 15)}</button>
+        <button data-edit="${h.id}" aria-label="Edit">${icon('pencil', 15)}</button>
       </div>
     </div>`).join('');
 
@@ -685,8 +689,8 @@ function openSettings() {
     <div class="hint" style="margin-bottom:11px">
       Your data lives only on this phone. Export now and then and keep the file somewhere safe — it is also how you move to a new phone.
     </div>
-    <button class="btn" id="doExport">⬇︎ Export backup file</button>
-    <button class="btn" id="doImport">⬆︎ Restore from backup</button>
+    <button class="btn" id="doExport">${icon('download', 17)} Export backup file</button>
+    <button class="btn" id="doImport">${icon('upload', 17)} Restore from backup</button>
     <input type="file" id="importFile" accept="application/json" hidden>
     <button class="btn danger" id="doReset">Erase everything and start over</button>
 
@@ -736,7 +740,7 @@ function openSettings() {
     refresh();
   };
 
-  el('doExport').onclick = () => { store.exportBackup(); toast({ tone: 'streak', emoji: '💾', title: 'Backup saved', body: 'Keep it somewhere safe.' }); };
+  el('doExport').onclick = () => { store.exportBackup(); toast({ tone: 'streak', glyph: 'download', title: 'Backup saved', body: 'Keep it somewhere safe.' }); };
   el('doImport').onclick = () => el('importFile').click();
   el('importFile').onchange = async (e) => {
     const f = e.target.files[0];
@@ -745,7 +749,7 @@ function openSettings() {
       await store.importBackup(f);
       close();
       refresh();
-      toast({ tone: 'streak', emoji: '✅', title: 'Backup restored', body: 'Everything is back.' });
+      toast({ tone: 'streak', glyph: 'check', title: 'Backup restored', body: 'Everything is back.' });
     } catch (err) {
       alert(`Could not read that file.\n\n${err.message}`);
     }
@@ -771,6 +775,10 @@ function editHabit(id) {
   const state = store.get();
   const h = id ? state.habits.find((x) => x.id === id) : null;
   const kind = habitKind(h);
+  /* Start on the habit's current icon when it's one of ours; a habit still
+     carrying an unmapped emoji just starts the picker unselected. */
+  let startIcon = h && hasIcon(h.icon) ? h.icon : (h ? '' : 'star');
+  let chosenIcon = startIcon;
 
   const close = modal(`
     <h3>${h ? 'Edit habit' : 'New habit'}</h3>
@@ -779,15 +787,16 @@ function editHabit(id) {
       <label>Name</label>
       <input type="text" id="hName" value="${h ? esc(h.name) : ''}" placeholder="e.g. Tracked my food">
     </div>
-    <div class="row2">
-      <div class="field">
-        <label>Icon</label>
-        <input type="text" id="hEmoji" maxlength="4" value="${h ? esc(h.emoji) : '⭐'}">
-      </div>
-      <div class="field">
-        <label>Weight</label>
-        <input type="number" id="hWeight" min="1" max="40" value="${h ? h.weight : 10}">
-        <div class="help">Bigger = a larger slice of the daily pot.</div>
+    <div class="field">
+      <label>Weight</label>
+      <input type="number" id="hWeight" min="1" max="40" value="${h ? h.weight : 10}">
+      <div class="help">Bigger = a larger slice of the daily pot.</div>
+    </div>
+    <div class="field">
+      <label>Icon</label>
+      <div class="icon-grid" id="hIconGrid">
+        ${PICKER_ICONS.map((k) => `
+          <button type="button" class="icon-pick ${startIcon === k ? 'on' : ''}" data-icon="${k}" aria-label="${k}">${icon(k, 20)}</button>`).join('')}
       </div>
     </div>
     <div class="field">
@@ -842,12 +851,20 @@ function editHabit(id) {
     el('thresholdField').style.display = k === 'rating' ? 'block' : 'none';
     el('counterFields').style.display = k === 'counter' ? 'block' : 'none';
   };
+  document.querySelectorAll('#hIconGrid .icon-pick').forEach((b) => {
+    b.onclick = () => {
+      chosenIcon = b.dataset.icon;
+      document.querySelectorAll('#hIconGrid .icon-pick').forEach((x) => x.classList.toggle('on', x === b));
+    };
+  });
 
   el('saveHabit').onclick = () => {
     const k = el('hType').value;
     const patch = {
       name: el('hName').value.trim() || 'Untitled',
-      emoji: el('hEmoji').value.trim() || '⭐',
+      /* Only overwrite the saved glyph if a new one was actually chosen, so
+         an unmapped emoji survives an edit that didn't touch the icon. */
+      ...(chosenIcon ? { icon: chosenIcon, emoji: '' } : {}),
       weight: Math.max(1, Math.min(40, +el('hWeight').value || 10)),
     };
     if (k === 'binary') {
@@ -920,7 +937,7 @@ function toast(e) {
   const box = el('toasts');
   const node = document.createElement('div');
   node.className = `toast ${e.tone || ''}`;
-  node.innerHTML = `<div class="ic">${e.emoji || '✨'}</div><div class="tx"><div class="tt">${esc(e.title)}</div><div class="tb">${esc(e.body)}</div></div>`;
+  node.innerHTML = `<div class="ic-wrap">${icon(e.glyph || e.emoji || 'star', 20)}</div><div class="tx"><div class="tt">${esc(e.title)}</div><div class="tb">${esc(e.body)}</div></div>`;
   box.appendChild(node);
   node.onclick = () => node.remove();
   setTimeout(() => { node.classList.add('out'); setTimeout(() => node.remove(), 320); }, 4600);
@@ -929,7 +946,8 @@ function toast(e) {
 function confetti() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const box = el('confetti');
-  const colors = ['#ffb454', '#ff8a4c', '#5cffc0', '#3fd6ff', '#8b7bff', '#ff7bd5'];
+  /* Gold and steel only — a rainbow burst would undo the whole palette. */
+  const colors = ['#D4AF37', '#F0D67A', '#B8860B', '#A7ADB5', '#8A6410', '#E4E8EC'];
   for (let i = 0; i < 46; i += 1) {
     const p = document.createElement('i');
     p.style.left = `${Math.random() * 100}%`;

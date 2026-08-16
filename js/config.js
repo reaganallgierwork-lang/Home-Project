@@ -17,7 +17,9 @@
    never have to come back here. This is only the starting set.
 
      name      what you see on the log screen
-     emoji     the little icon beside it
+     icon      which glyph shows beside it. Names come from js/icons.js —
+               open PICKER_ICONS there for the full list. You can also change
+               this per habit in the app, so you never need to edit it here.
      type      'binary' = did it / didn't do it
                'scale'  = a numeric habit, in one of two flavours (see
                           inputStyle below)
@@ -41,16 +43,16 @@
      stepLabel (counter habits only) what one tap is called, e.g. 'cup'.
    ------------------------------------------------------------------------- */
 export const DEFAULT_HABITS = [
-  { name: 'No alcohol',        emoji: '🚫',  type: 'binary', weight: 20 },
-  { name: 'Training',          emoji: '🏋️',  type: 'binary', weight: 20 },
-  { name: 'McGill Big Three',  emoji: '🧘',  type: 'binary', weight: 18 },
-  { name: 'Sleep quality',     emoji: '😴',  type: 'scale',  weight: 12, threshold: 3, inputStyle: 'rating' },
-  { name: 'Bible reading',     emoji: '📖',  type: 'binary', weight: 10 },
-  { name: 'Protein target',    emoji: '🥩',  type: 'binary', weight: 10 },
+  { name: 'No alcohol',        icon: 'noAlcohol', type: 'binary', weight: 20 },
+  { name: 'Training',          icon: 'dumbbell',  type: 'binary', weight: 20 },
+  { name: 'McGill Big Three',  icon: 'spine',     type: 'binary', weight: 18 },
+  { name: 'Sleep quality',     icon: 'moon',      type: 'scale',  weight: 12, threshold: 3, inputStyle: 'rating' },
+  { name: 'Bible reading',     icon: 'book',      type: 'binary', weight: 10 },
+  { name: 'Protein target',    icon: 'utensils',  type: 'binary', weight: 10 },
   /* Hydration counts 8oz cups toward a 150oz daily goal. Each cup is worth
      a pro-rata share of the habit's points (8/150 of it), and hitting the
      full 150oz is what keeps the streak alive. */
-  { name: 'Hydration',         emoji: '💧',  type: 'scale',  weight: 10, max: 150, threshold: 150, step: 8, unit: 'oz', stepLabel: 'cup', inputStyle: 'counter' },
+  { name: 'Hydration',         icon: 'droplet',   type: 'scale',  weight: 10, max: 150, threshold: 150, step: 8, unit: 'oz', stepLabel: 'cup', inputStyle: 'counter' },
 ];
 
 /* ---------------------------------------------------------------------------

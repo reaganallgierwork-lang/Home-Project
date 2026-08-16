@@ -488,7 +488,7 @@ export function celebrationsFor(state, result) {
   if (!today) return events;
 
   const habitName = (id) => state.habits.find((h) => h.id === id)?.name || 'that habit';
-  const habitEmoji = (id) => state.habits.find((h) => h.id === id)?.emoji || '⭐';
+  const habitGlyph = (id) => { const h = state.habits.find((x) => x.id === id); return h?.icon || h?.emoji || 'star'; };
 
   today.rows.forEach((row) => {
     if (!row.success) return;
@@ -498,7 +498,7 @@ export function celebrationsFor(state, result) {
       events.push({
         key: `comeback:${row.habitId}:${day}`,
         tone: 'comeback',
-        emoji: habitEmoji(row.habitId),
+        glyph: habitGlyph(row.habitId),
         title: `You reclaimed your ${habitName(row.habitId).toLowerCase()} streak`,
         body: `Straight back on it the next day — that's the hard part. +${Math.round(row.reclaimed)} points recovered.`,
       });
@@ -506,7 +506,7 @@ export function celebrationsFor(state, result) {
       events.push({
         key: `restart:${row.habitId}:${day}`,
         tone: 'comeback',
-        emoji: habitEmoji(row.habitId),
+        glyph: habitGlyph(row.habitId),
         title: `${habitName(row.habitId)} is back`,
         body: `${row.gapEntering} days off, and you picked it up anyway. Worth ${Math.round(row.available)} today — day one of the next run.`,
       });
@@ -518,7 +518,7 @@ export function celebrationsFor(state, result) {
       events.push({
         key: `streak:${row.habitId}:${st.current}:${day}`,
         tone: 'streak',
-        emoji: habitEmoji(row.habitId),
+        glyph: habitGlyph(row.habitId),
         title: `${st.current}-day ${habitName(row.habitId)} streak`,
         body: st.current === st.best ? 'That is your best run yet.' : 'Still going. Keep it rolling.',
       });
@@ -530,7 +530,7 @@ export function celebrationsFor(state, result) {
     events.push({
       key: `perfect:${day}`,
       tone: 'perfect',
-      emoji: '🎯',
+      glyph: 'target',
       title: 'Clean sweep',
       body: 'Every habit logged and done. Full pot.',
     });
@@ -543,7 +543,7 @@ export function celebrationsFor(state, result) {
     events.push({
       key: `tier:${m.key}:${m.achieved}`,
       tone: 'tier',
-      emoji: '🏅',
+      glyph: 'shield',
       title: `${t.name} unlocked`,
       body: t.blurb,
     });

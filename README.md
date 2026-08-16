@@ -1,12 +1,39 @@
-# Habit Ladder
+# ASCENT
 
-A personal daily habit tracker. Log your habits in a few taps, earn points from
-a fixed daily pot, keep a separate streak for every habit, and climb a ladder of
-monthly tiers with badges you keep forever.
+**Fitness. Habits. Legacy.**
+
+A personal daily tracker. Log habits in a few taps, build and log workouts, earn
+points from a fixed daily pot, keep a separate streak for every habit, and climb
+a ladder of monthly tiers with badges you keep forever.
 
 It is a web app that installs to your phone's home screen and works offline.
 There is nothing to buy, no account to make, and your data never leaves your
 phone.
+
+## Look and feel
+
+Onyx, steel and gold, dark only — this is a deliberate choice, not a missing
+feature. A light rendering of a gold-on-black identity looks like a weaker
+product, so `color-scheme: dark` is declared and the app stays dark whatever the
+phone asks for.
+
+- **Palette** — Onyx `#0B0D11`, Slate `#1E222A`, Steel `#A7ADB5`,
+  Gold `#D4AF37`, Bronze `#B8860B`. Gold is the only signal colour: it marks
+  what's done, what's live, and what's next, and nothing else competes with it.
+- **Type** — Anton for display (titles, hero figures, the big numbers), Inter
+  for everything else. Both load from Google Fonts with a full system fallback,
+  so the app is legible before they arrive and stays legible offline.
+- **Icons** — a single-weight line set drawn in `js/icons.js`, no emoji
+  anywhere. Icons inherit their container's colour, so they never fight the
+  palette. Habits saved with an emoji before the overhaul are migrated onto the
+  matching icon automatically; anything unrecognised keeps rendering as it was.
+- **Badges** — struck metal in the same gold/steel/onyx family, ranked so you
+  can read the tier at a glance: a gold shield at Foundation, a crown at
+  Relentless, a black sun with a gold corona at Eclipse.
+
+To recolour the whole app, change the variables at the top of `app.css`. The
+chart mark colour is validated for contrast against the card surface — if you
+change it, re-validate rather than guessing.
 
 ---
 
@@ -153,18 +180,18 @@ Consecutive qualifying months earn rare prestige badges:
 Note that the chain qualifies at Discipline, not the top tier — one merely very
 good month won't break a year-long run.
 
-Badges get visibly more elaborate as they get rarer. Foundation is a plain
-bronze coin; Eclipse is a black sun with a rotating gold corona. You can tell
-rank at a glance.
+Badges get visibly more elaborate as they get rarer. Foundation is a struck gold
+shield; Eclipse is a black sun with a rotating gold corona. You can tell rank at
+a glance.
 
 ---
 
 ## Changing things without touching code
 
-Tap the **⚙︎** in the top right of the log screen. From there you can:
+Tap the **gear** in the top right of the log screen. From there you can:
 
 - **Add, rename or re-icon any habit** — "Tracked my food", "No photo-checking",
-  whatever you want. New habits start counting from the day you add them, so
+  whatever you want, with an icon picked from the grid. New habits start counting from the day you add them, so
   you never get retroactive misses.
 - **Change any weight** with a slider. It shows you live what each habit is
   worth per day.
@@ -318,6 +345,7 @@ on your phone about a minute later.
 | `js/chart.js` | The reusable chart. Knows nothing about habits or lifts. |
 | `js/analyze.js` | The Data tab itself. |
 | `js/ids.js` | The shared id generator, kept separate so modules needn't import each other. |
+| `js/icons.js` | The line-icon set, the picker list, and the emoji-to-icon migration map. |
 | `app.css` | All the styling. The colours are variables at the very top. |
 | `index.html` | The page shell. |
 | `sw.js` | Makes the app work offline. |
@@ -357,4 +385,5 @@ node metrics.test.mjs     # 44 checks — bucketing, aggregation, trends
 node workouts.test.mjs    # 49 checks — blocks, set records, 1RM, templates
 ```
 
-Needs Node.js installed. All 160 should pass.
+Needs Node.js installed. All 160 should pass. The visual overhaul changed no
+scoring or workout logic, so all 160 pass unchanged.

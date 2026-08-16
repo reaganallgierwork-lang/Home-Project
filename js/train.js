@@ -25,6 +25,7 @@ import {
   sessionSetCount, sessionRecords, personalBests, fmtWeight,
   fmtDuration, parseDuration, allRecords,
 } from './workouts.js';
+import { icon } from './icons.js';
 
 const el = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -56,7 +57,7 @@ function renderHome(state, unit) {
   el('screen-train').innerHTML = `
     <div class="topbar">
       <h1>Train<div class="sub">${state.sessions.length} ${state.sessions.length === 1 ? 'workout' : 'workouts'} logged</div></h1>
-      <button class="icon-btn" id="libBtn" aria-label="Exercise library">📚</button>
+      <button class="icon-btn" id="libBtn" aria-label="Exercise library">${icon('library', 19)}</button>
     </div>
 
     ${open ? `
@@ -67,7 +68,7 @@ function renderHome(state, unit) {
         </div>
         <button class="btn primary" id="resumeBtn">Continue</button>
       </div>` : `
-      <button class="btn primary big" id="startBtn">＋ Start a workout</button>`}
+      <button class="btn primary big" id="startBtn">${icon('plus', 18)} Start a workout</button>`}
 
     ${state.templates.length ? `
       <div class="section-title">My workouts</div>
@@ -78,10 +79,10 @@ function renderHome(state, unit) {
             <div class="wc-sub">${t.blocks.length} ${t.blocks.length === 1 ? 'block' : 'blocks'} · ${esc(t.blocks.map((b) => blockTitle(state, b)).slice(0, 3).join(', '))}</div>
           </div>
           <button class="wc-go" data-start="${esc(t.id)}">Start</button>
-          <button class="wc-edit" data-edit="${esc(t.id)}" aria-label="Edit">✎</button>
+          <button class="wc-edit" data-edit="${esc(t.id)}" aria-label="Edit">${icon('pencil', 15)}</button>
         </div>`).join('')}` : ''}
 
-    <button class="btn" id="buildBtn" style="margin-top:12px">🧱 Build a workout</button>
+    <button class="btn" id="buildBtn" style="margin-top:12px">${icon('layers', 17)} Build a workout</button>
 
     ${recent.length ? `
       <div class="section-title">Recent</div>
@@ -93,11 +94,11 @@ function renderHome(state, unit) {
             <div class="wc-name">${esc(s.name)}</div>
             <div class="wc-sub">${esc(store.dayLabel(s.day, { weekday: 'short', month: 'short', day: 'numeric' }))} · ${sessionSetCount(s)} sets${vol ? ` · ${Math.round(vol).toLocaleString()} ${unit}` : ''}</div>
           </div>
-          <span class="wc-chev">›</span>
+          <span class="wc-chev">${icon('chevronRight', 18)}</span>
         </div>`;
   }).join('')}` : `
       <div class="empty" style="margin-top:20px">
-        <div class="big">🏋️</div>
+        <div class="big">${icon('dumbbell', 34)}</div>
         Nothing logged yet. Build a workout, or start an empty one and add as you go.
       </div>`}`;
 
@@ -159,8 +160,8 @@ function openStartSheet(state) {
 function renderBuild(state, unit) {
   el('screen-train').innerHTML = `
     <div class="topbar">
-      <button class="icon-btn" id="backBtn" aria-label="Back">‹</button>
-      <h1 style="font-size:18px">Build workout</h1>
+      <button class="icon-btn" id="backBtn" aria-label="Back">${icon('chevronLeft', 18)}</button>
+      <h1 style="font-size:22px">Build workout</h1>
     </div>
     <div class="field">
       <label>Workout name</label>
@@ -168,9 +169,9 @@ function renderBuild(state, unit) {
     </div>
 
     ${draft.blocks.length ? draft.blocks.map((b, i) => blockCard(state, b, i, unit)).join('')
-    : '<div class="empty"><div class="big">🧱</div>No blocks yet. Add your first one below.</div>'}
+    : `<div class="empty"><div class="big">${icon('layers', 34)}</div>No blocks yet. Add your first one below.</div>`}
 
-    <button class="btn ${draft.blocks.length ? '' : 'primary'}" id="addBlock" style="margin-top:12px">＋ Add a block</button>
+    <button class="btn ${draft.blocks.length ? '' : 'primary'}" id="addBlock" style="margin-top:12px">${icon('plus', 17)} Add a block</button>
     <button class="btn ${draft.blocks.length ? 'primary' : ''}" id="saveTpl">Save workout</button>
     <button class="btn ghost" id="cancelTpl">Cancel</button>`;
 
@@ -194,14 +195,14 @@ function blockCard(state, b, i, unit) {
   return `
     <div class="block-card" data-block="${esc(b.id)}">
       <div class="bc-head">
-        <span class="bc-ic">${info.icon}</span>
+        <span class="bc-ic">${icon(info.icon, 19)}</span>
         <div class="bc-t">
           <b>${esc(blockTitle(state, b))}</b>
           <span>${esc(info.label)}</span>
         </div>
-        <button class="bc-btn" data-up="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">↑</button>
-        <button class="bc-btn" data-cfg="${esc(b.id)}" aria-label="Edit">✎</button>
-        <button class="bc-btn" data-del="${esc(b.id)}" aria-label="Remove">✕</button>
+        <button class="bc-btn" data-up="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">${icon('arrowUp', 14)}</button>
+        <button class="bc-btn" data-cfg="${esc(b.id)}" aria-label="Edit">${icon('pencil', 14)}</button>
+        <button class="bc-btn" data-del="${esc(b.id)}" aria-label="Remove">${icon('close', 14)}</button>
       </div>
       <div class="bc-desc">${esc(describeBlock(state, b, unit))}</div>
     </div>`;
@@ -238,7 +239,7 @@ function pickBlockType(state, done) {
     <div class="lede">Pick the shape first, then the details.</div>
     ${BLOCK_TYPES.map((t) => `
       <button class="type-item" data-type="${t.type}">
-        <span class="ti-ic">${t.icon}</span>
+        <span class="ti-ic">${icon(t.icon, 22)}</span>
         <span class="ti-tx"><b>${esc(t.label)}</b><span>${esc(t.blurb)}</span></span>
       </button>`).join('')}
     <button class="btn ghost" id="cancelType">Cancel</button>`);
@@ -282,7 +283,7 @@ function pickExercise(state, done) {
             </button>`).join('')}
         </div>`).join('')}
     </div>
-    <button class="btn" id="newEx">＋ New exercise</button>
+    <button class="btn" id="newEx">${icon('plus', 17)} New exercise</button>
     <button class="btn ghost" id="cancelEx">Cancel</button>`);
 
   const search = el('exSearch');
@@ -445,10 +446,10 @@ function configSuperset(state, block, done, isNew) {
           <div class="ss-in">
             <input type="number" inputmode="decimal" data-ss="${i}" data-f="weight" value="${it.sets[0]?.weight ?? ''}" placeholder="${unit}">
             <input type="number" inputmode="numeric" data-ss="${i}" data-f="reps" value="${it.sets[0]?.reps ?? ''}" placeholder="reps">
-            <button class="bc-btn" data-ssdel="${i}">✕</button>
+            <button class="bc-btn" data-ssdel="${i}" aria-label="Remove">${icon('close', 14)}</button>
           </div>
         </div>`).join('') : '<div class="hint">Add at least two exercises.</div>'}
-      <button class="btn" id="ssAdd">＋ Add exercise</button>
+      <button class="btn" id="ssAdd">${icon('plus', 17)} Add exercise</button>
       <button class="btn primary" id="okBlock">${isNew ? 'Add to workout' : 'Save changes'}</button>
       <button class="btn ghost" id="cancelBlock">Cancel</button>`;
     document.querySelector('.modal').innerHTML = html;
@@ -538,10 +539,10 @@ function configMetcon(state, block, done, isNew) {
           <div class="ss-in">
             <input type="number" inputmode="numeric" data-mv="${i}" data-f="reps" value="${m.reps ?? ''}" placeholder="reps">
             <input type="number" inputmode="decimal" data-mv="${i}" data-f="weight" value="${m.weight ?? ''}" placeholder="${unit}">
-            <button class="bc-btn" data-mvdel="${i}">✕</button>
+            <button class="bc-btn" data-mvdel="${i}" aria-label="Remove">${icon('close', 14)}</button>
           </div>
         </div>`).join('') : '<div class="hint">Add the movements for one round.</div>'}
-      <button class="btn" id="mcAdd">＋ Add movement</button>
+      <button class="btn" id="mcAdd">${icon('plus', 17)} Add movement</button>
       <button class="btn primary" id="okBlock">${isNew ? 'Add to workout' : 'Save changes'}</button>
       <button class="btn ghost" id="cancelBlock">Cancel</button>`;
     bind();
@@ -600,17 +601,17 @@ function renderLog(state, unit) {
 
   el('screen-train').innerHTML = `
     <div class="topbar">
-      <button class="icon-btn" id="backBtn" aria-label="Back">‹</button>
-      <h1 style="font-size:18px">${esc(session.name)}<div class="sub">${esc(store.dayLabel(session.day, { weekday: 'long', month: 'short', day: 'numeric' }))}</div></h1>
-      <button class="icon-btn" id="sessMenu" aria-label="More">⋯</button>
+      <button class="icon-btn" id="backBtn" aria-label="Back">${icon('chevronLeft', 18)}</button>
+      <h1 style="font-size:22px">${esc(session.name)}<div class="sub">${esc(store.dayLabel(session.day, { weekday: 'long', month: 'short', day: 'numeric' }))}</div></h1>
+      <button class="icon-btn" id="sessMenu" aria-label="More">${icon('more', 19)}</button>
     </div>
 
     <div class="card tight totals" id="totals">${totalsHtml(session, unit)}</div>
 
     ${session.blocks.map((b) => logBlock(state, b, unit)).join('')
-      || '<div class="empty"><div class="big">🧱</div>Nothing in this workout yet.</div>'}
+      || `<div class="empty"><div class="big">${icon('layers', 34)}</div>Nothing in this workout yet.</div>`}
 
-    <button class="btn" id="addBlockLog" style="margin-top:12px">＋ Add a block</button>
+    <button class="btn" id="addBlockLog" style="margin-top:12px">${icon('plus', 17)} Add a block</button>
     ${done
     ? '<button class="btn ghost" id="reopenBtn">Reopen this workout</button>'
     : '<button class="btn primary" id="finishBtn">Finish workout</button>'}`;
@@ -649,17 +650,17 @@ function logBlock(state, b, unit) {
   const info = blockTypeInfo(b.type);
   const head = `
     <div class="bc-head">
-      <span class="bc-ic">${info.icon}</span>
+      <span class="bc-ic">${icon(info.icon, 19)}</span>
       <div class="bc-t"><b>${esc(blockTitle(state, b))}</b><span>${esc(info.label)}</span></div>
-      <button class="bc-btn" data-cfg="${esc(b.id)}" aria-label="Edit">✎</button>
-      <button class="bc-btn" data-del="${esc(b.id)}" aria-label="Remove">✕</button>
+      <button class="bc-btn" data-cfg="${esc(b.id)}" aria-label="Edit">${icon('pencil', 14)}</button>
+      <button class="bc-btn" data-del="${esc(b.id)}" aria-label="Remove">${icon('close', 14)}</button>
     </div>`;
 
   if (b.type === 'straight') {
     const ex = exerciseById(state, b.exerciseId);
     return `<div class="block-card">${head}
       ${setRows(b.sets, b.id, null, ex, unit)}
-      <button class="addset" data-addset="${esc(b.id)}">＋ Add set</button>
+      <button class="addset" data-addset="${esc(b.id)}">${icon('plus', 14)} Add set</button>
     </div>`;
   }
 
@@ -676,7 +677,7 @@ function logBlock(state, b, unit) {
                 <span class="sr-n" title="${esc(exerciseName(state, it.exerciseId))}">${esc(shortName(exerciseName(state, it.exerciseId)))}</span>
                 ${ex && ex.track === 'weight_reps' ? `<input type="number" inputmode="decimal" data-ss="${esc(b.id)}:${ii}:${r}" data-f="weight" value="${s.weight ?? ''}" placeholder="${unit}">` : ''}
                 <input type="number" inputmode="numeric" data-ss="${esc(b.id)}:${ii}:${r}" data-f="reps" value="${s.reps ?? ''}" placeholder="reps">
-                <button class="tick ${s.done ? 'on' : ''}" data-sstick="${esc(b.id)}:${ii}:${r}">✓</button>
+                <button class="tick ${s.done ? 'on' : ''}" data-sstick="${esc(b.id)}:${ii}:${r}" aria-label="Done">${icon('check', 19)}</button>
               </div>`;
   }).join('')}
         </div>`).join('')}
@@ -733,7 +734,7 @@ function setRows(sets, blockId, _r, ex, unit) {
         ${showsT ? `<input type="number" inputmode="numeric" data-set="${esc(blockId)}:${i}" data-f="seconds" value="${s.seconds ?? ''}" placeholder="secs">`
     : showsD ? `<input type="number" inputmode="numeric" data-set="${esc(blockId)}:${i}" data-f="distance" value="${s.distance ?? ''}" placeholder="m">`
       : `<input type="number" inputmode="numeric" data-set="${esc(blockId)}:${i}" data-f="reps" value="${s.reps ?? ''}" placeholder="reps">`}
-        <button class="tick ${s.done ? 'on' : ''}" data-tick="${esc(blockId)}:${i}">✓</button>
+        <button class="tick ${s.done ? 'on' : ''}" data-tick="${esc(blockId)}:${i}" aria-label="Done">${icon('check', 19)}</button>
       </div>`).join('');
 }
 
@@ -920,12 +921,12 @@ function openLibrary(state) {
           <div class="pick-head">${esc(c)}</div>
           ${items.map((e) => `
             <button class="pick-item" data-open="${esc(e.id)}" data-name="${esc(e.name.toLowerCase())}">
-              <span>${esc(e.name)}</span><small style="color:var(--faint)">›</small>
+              <span>${esc(e.name)}</span><small style="color:var(--faint)">${icon('chevronRight', 14)}</small>
             </button>`).join('')}
         </div>`;
   }).join('')}
     </div>
-    <button class="btn" id="libNew">＋ New exercise</button>
+    <button class="btn" id="libNew">${icon('plus', 17)} New exercise</button>
     <button class="btn ghost" id="libClose">Done</button>`);
 
   document.querySelectorAll('.modal [data-u]').forEach((b) => {
@@ -1012,7 +1013,7 @@ function renderExercise(state, unit) {
     <div class="topbar">
       <button class="icon-btn" id="backBtn" aria-label="Back">‹</button>
       <h1 style="font-size:18px">${esc(ex.name)}<div class="sub">${esc(ex.category)} · ${esc(TRACK_MODES[ex.track].label)}</div></h1>
-      <button class="icon-btn" id="exEdit" aria-label="Edit">✎</button>
+      <button class="icon-btn" id="exEdit" aria-label="Edit">${icon('pencil', 18)}</button>
     </div>
 
     ${pb ? `
@@ -1027,7 +1028,7 @@ function renderExercise(state, unit) {
           Best estimate came from ${Math.round(pb.best1RM.rec.weight)} ${esc(unit)} × ${pb.best1RM.rec.reps}.
           Estimates only use deliberate sets of 12 reps or fewer.
         </div>` : ''}
-      </div>` : '<div class="empty"><div class="big">📈</div>No history yet. Log a workout with this in it.</div>'}
+      </div>` : `<div class="empty"><div class="big">${icon('chartLine', 34)}</div>No history yet. Log a workout with this in it.</div>`}
 
     ${days.length ? `
       <div class="section-title">Recent sessions</div>
@@ -1083,7 +1084,7 @@ function toast(title, body) {
   if (!box) return;
   const n = document.createElement('div');
   n.className = 'toast streak';
-  n.innerHTML = `<div class="ic">🏋️</div><div class="tx"><div class="tt">${esc(title)}</div><div class="tb">${esc(body)}</div></div>`;
+  n.innerHTML = `<div class="ic-wrap">${icon('dumbbell', 20)}</div><div class="tx"><div class="tt">${esc(title)}</div><div class="tb">${esc(body)}</div></div>`;
   box.appendChild(n);
   setTimeout(() => { n.classList.add('out'); setTimeout(() => n.remove(), 320); }, 3800);
 }

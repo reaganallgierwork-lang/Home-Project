@@ -19,7 +19,7 @@
        registerSource({
          id: 'workouts',
          label: 'Workouts',
-         icon: '🏋️',
+         icon: 'dumbbell',
          list(state) {
            // Return one metric per thing worth charting. Build the list from
            // state, so new exercises appear the moment they're logged —

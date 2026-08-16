@@ -19,6 +19,7 @@ import {
 import { habitTableColumns } from './metrics-habits.js';
 import { workoutTableColumns } from './metrics-workouts.js';
 import { renderChart } from './chart.js';
+import { icon } from './icons.js';
 
 const el = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -67,7 +68,7 @@ export function renderAnalyze(state, onRefresh) {
 function renderTrends(state, u) {
   const metrics = listMetrics(state);
   if (!metrics.length) {
-    el('analyzeBody').innerHTML = '<div class="empty"><div class="big">📈</div>Nothing to chart yet. Log a few days first.</div>';
+    el('analyzeBody').innerHTML = `<div class="empty"><div class="big">${icon('chartLine', 34)}</div>Nothing to chart yet. Log a few days first.</div>`;
     return;
   }
 
@@ -88,7 +89,7 @@ function renderTrends(state, u) {
   const filters = `
     <div class="filter-row">
       <button class="picker" id="metricPicker">
-        <span class="pk-ic">${esc(metric.groupIcon || metric.sourceIcon || '📊')}</span>
+        <span class="pk-ic">${icon(metric.groupIcon || metric.sourceIcon || 'chartLine', 20)}</span>
         <span class="pk-tx"><b>${esc(metric.group)}</b><span>${esc(metric.label)}</span></span>
         <span class="pk-ch">▾</span>
       </button>
@@ -238,11 +239,11 @@ function openMetricPicker(state, metrics, current) {
       <div id="metricList">
         ${groups.map((g) => `
           <div class="pick-group" data-name="${esc(g.name.toLowerCase())}">
-            <div class="pick-head">${esc(g.icon || '')} ${esc(g.name)}</div>
+            <div class="pick-head">${icon(g.icon || 'chartLine', 14)}${esc(g.name)}</div>
             ${g.items.map((m) => `
               <button class="pick-item ${m.id === current.id ? 'on' : ''}" data-id="${esc(m.id)}" data-label="${esc(m.label.toLowerCase())}">
                 <span>${esc(m.label)}</span>
-                ${m.id === current.id ? '<b>✓</b>' : ''}
+                ${m.id === current.id ? icon('check', 16) : ''}
               </button>`).join('')}
           </div>`).join('')}
       </div>
@@ -309,7 +310,7 @@ function renderTable(state, u) {
   }
 
   const head = `<th class="sortable ${sortKey === 'day' ? 'sorted' : ''}" data-sort="day">Date ${sortKey === 'day' ? (dir < 0 ? '▾' : '▴') : ''}</th>`
-    + cols.map((c) => `<th class="sortable ${sortKey === c.id ? 'sorted' : ''}" data-sort="${esc(c.id)}">${esc(c.icon)} ${esc(c.label)} ${sortKey === c.id ? (dir < 0 ? '▾' : '▴') : ''}</th>`).join('');
+    + cols.map((c) => `<th class="sortable ${sortKey === c.id ? 'sorted' : ''}" data-sort="${esc(c.id)}">${esc(c.label)} ${sortKey === c.id ? (dir < 0 ? '▾' : '▴') : ''}</th>`).join('');
 
   const body = rows.map((d) => {
     const cells = cols.map((c) => {
@@ -336,7 +337,7 @@ function renderTable(state, u) {
         </table>
       </div>
     </div>
-    <button class="btn" id="csvBtn">⬇︎ Export these ${rows.length} days as a spreadsheet</button>
+    <button class="btn" id="csvBtn">${icon('download', 17)} Export these ${rows.length} days as a spreadsheet</button>
     <div class="hint" style="margin-top:8px;text-align:center">
       Opens in Numbers, Excel or Google Sheets.
     </div>`;

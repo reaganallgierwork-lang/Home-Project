@@ -111,31 +111,31 @@ export const BLOCK_TYPES = [
   {
     type: 'straight',
     label: 'Straight sets',
-    icon: '🏋️',
+    icon: 'layers',
     blurb: 'One exercise for a number of sets. The everyday choice.',
   },
   {
     type: 'superset',
     label: 'Superset',
-    icon: '🔗',
+    icon: 'link',
     blurb: 'Two or more exercises back to back, for a number of rounds.',
   },
   {
     type: 'amrap',
     label: 'AMRAP',
-    icon: '⏱️',
+    icon: 'timer',
     blurb: 'As many rounds as possible inside a time cap.',
   },
   {
     type: 'rft',
     label: 'Rounds for time',
-    icon: '🏁',
+    icon: 'flag',
     blurb: 'A set number of rounds, raced against the clock.',
   },
   {
     type: 'emom',
     label: 'EMOM',
-    icon: '⏲️',
+    icon: 'clock',
     blurb: 'Every minute on the minute, for a number of minutes.',
   },
 ];

@@ -137,7 +137,7 @@ function namedMetcons(state) {
 registerSource({
   id: 'workouts',
   label: 'Training',
-  icon: '🏋️',
+  icon: 'dumbbell',
 
   list(state) {
     const unit = state.settings?.weightUnit || 'lb';
@@ -147,7 +147,7 @@ registerSource({
     metrics.push({
       id: 'train:volume',
       group: 'Training overall',
-      groupIcon: '🏋️',
+      groupIcon: 'dumbbell',
       label: 'Total volume',
       unit,
       defaultAgg: 'sum',
@@ -162,7 +162,7 @@ registerSource({
     metrics.push({
       id: 'train:sets',
       group: 'Training overall',
-      groupIcon: '🏋️',
+      groupIcon: 'dumbbell',
       label: 'Sets performed',
       unit: '',
       defaultAgg: 'sum',
@@ -176,7 +176,7 @@ registerSource({
     metrics.push({
       id: 'train:sessions',
       group: 'Training overall',
-      groupIcon: '🏋️',
+      groupIcon: 'dumbbell',
       label: 'Days trained',
       unit: '%',
       scale: 100,
@@ -200,7 +200,7 @@ registerSource({
         metrics.push({
           id: `lift:${exId}:top`,
           group: g,
-          groupIcon: '🏋️',
+          groupIcon: 'dumbbell',
           label: 'Heaviest set',
           unit,
           defaultAgg: 'max',
@@ -215,7 +215,7 @@ registerSource({
         metrics.push({
           id: `lift:${exId}:e1rm`,
           group: g,
-          groupIcon: '🏋️',
+          groupIcon: 'dumbbell',
           label: `Estimated 1RM`,
           unit,
           defaultAgg: 'max',
@@ -235,7 +235,7 @@ registerSource({
         metrics.push({
           id: `lift:${exId}:volume`,
           group: g,
-          groupIcon: '🏋️',
+          groupIcon: 'dumbbell',
           label: 'Volume',
           unit,
           defaultAgg: 'sum',
@@ -250,7 +250,7 @@ registerSource({
       metrics.push({
         id: `lift:${exId}:reps`,
         group: g,
-        groupIcon: '🏋️',
+        groupIcon: 'dumbbell',
         label: 'Total reps',
         unit: '',
         defaultAgg: 'sum',
@@ -265,7 +265,7 @@ registerSource({
         metrics.push({
           id: `lift:${exId}:seconds`,
           group: g,
-          groupIcon: '⏱️',
+          groupIcon: 'timer',
           label: 'Best hold',
           unit: 's',
           defaultAgg: 'max',
@@ -281,7 +281,7 @@ registerSource({
         metrics.push({
           id: `lift:${exId}:distance`,
           group: g,
-          groupIcon: '📏',
+          groupIcon: 'ruler',
           label: 'Distance',
           unit: 'm',
           defaultAgg: 'sum',
@@ -299,7 +299,7 @@ registerSource({
       metrics.push({
         id: `metcon:${name}:${kind}`,
         group: name,
-        groupIcon: kind === 'time' ? '🏁' : '⏱️',
+        groupIcon: kind === 'time' ? 'flag' : 'timer',
         label: kind === 'time' ? 'Finish time' : 'Rounds completed',
         unit: kind === 'time' ? 's' : 'rounds',
         precision: kind === 'time' ? 0 : 1,
@@ -331,7 +331,7 @@ export function workoutTableColumns(state) {
     {
       id: '__workout',
       label: 'Workout',
-      icon: '🏋️',
+      icon: 'dumbbell',
       get: (s, day) => {
         const names = (s.sessions || []).filter((x) => x.day === day).map((x) => x.name);
         return names.length ? names.join(', ') : null;
@@ -341,7 +341,7 @@ export function workoutTableColumns(state) {
     {
       id: '__volume',
       label: `Volume (${unit})`,
-      icon: '📦',
+      icon: 'box',
       get: (s, day) => {
         const { byDay } = indexed(s);
         const recs = byDay.get(day);

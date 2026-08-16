@@ -8,6 +8,7 @@
 
 import { DEFAULT_HABITS, DEFAULTS } from './config.js';
 import { buildDefaultExercises } from './workouts.js';
+import { resolveIcon } from './icons.js';
 
 const KEY = 'habitforge.v1';
 
@@ -83,7 +84,8 @@ function freshState() {
     habits: DEFAULT_HABITS.map((h) => ({
       id: newId(),
       name: h.name,
-      emoji: h.emoji,
+      icon: h.icon,
+      emoji: '',
       type: h.type,
       weight: h.weight,
       threshold: h.threshold ?? (h.inputStyle === 'counter' ? (h.max ?? 100) : 3),
@@ -173,7 +175,10 @@ function normalise(raw) {
   s.habits = s.habits.map((h) => ({
     id: h.id || newId(),
     name: String(h.name ?? 'Untitled'),
-    emoji: h.emoji || '•',
+    /* `icon` is a key from icons.js. `emoji` only survives for saves made
+       before the icon set existed, and is migrated below. */
+    icon: h.icon || '',
+    emoji: h.emoji || '',
     type: h.type === 'scale' ? 'scale' : 'binary',
     weight: Number.isFinite(+h.weight) && +h.weight > 0 ? +h.weight : 10,
     threshold: Number.isFinite(+h.threshold) ? +h.threshold : 3,
@@ -189,6 +194,17 @@ function normalise(raw) {
   /* Percentages must be ascending for the ladder to make sense. */
   s.settings.tierPercents = (s.settings.tierPercents || DEFAULTS.tierPercents)
     .map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+
+  /* ---- one-time migration: emoji habits become line icons ----
+     Habits saved before the visual overhaul carry an emoji. Map the ones we
+     recognise onto the new set; anything unrecognised keeps its character and
+     still renders, so no habit can end up with a blank square where its icon
+     used to be. */
+  s.habits.forEach((h) => {
+    if (h.icon) return;
+    const mapped = resolveIcon(h.emoji);
+    if (mapped) { h.icon = mapped; h.emoji = ''; }
+  });
 
   /* ---- one-time migration: Hydration moved from a tick box to counting
      8oz cups toward a 150oz goal. A past "yes" day already scored full
@@ -274,7 +290,8 @@ export function addHabit(partial) {
   const h = {
     id: newId(),
     name: partial.name || 'New habit',
-    emoji: partial.emoji || '⭐',
+    icon: partial.icon || 'star',
+    emoji: '',
     type: partial.type === 'scale' ? 'scale' : 'binary',
     weight: +partial.weight || 10,
     threshold: Number.isFinite(+partial.threshold) ? +partial.threshold : 3,

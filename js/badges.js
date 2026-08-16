@@ -36,244 +36,242 @@ function star(cx, cy, r, points = 5, inner = 0.42) {
 }
 
 /* ---------------------------------------------------------------------------
-   TIER 1 — Foundation. A plain struck bronze coin. Honest, unfussy.
+   The house palette, shared by every badge so the set reads as one family.
+   Gold, bronze, steel and onyx — no other hues anywhere in the collection.
+   ------------------------------------------------------------------------- */
+const M = {
+  gold: '#D4AF37', goldHi: '#F5E08C', goldLo: '#8A6410',
+  bronze: '#B8860B', bronzeHi: '#E0A93C', bronzeLo: '#6B4A08',
+  steel: '#A7ADB5', steelHi: '#E4E8EC', steelLo: '#4E555F',
+  onyx: '#0B0D11', slate: '#1E222A', ink: '#05060A',
+};
+
+/** A brushed-metal fill: highlight top-left, shadow bottom-right. */
+function metal(id, hi, mid, lo) {
+  return `<linearGradient id="${id}" x1="0.15" y1="0" x2="0.85" y2="1">
+    <stop offset="0" stop-color="${hi}"/><stop offset="0.42" stop-color="${mid}"/>
+    <stop offset="0.72" stop-color="${lo}"/><stop offset="1" stop-color="${mid}"/>
+  </linearGradient>`;
+}
+
+/* ---------------------------------------------------------------------------
+   TIER 1 — Foundation. A struck gold shield with a clean check. The board's
+   opening mark: solid, unfussy, obviously the first rung.
    ------------------------------------------------------------------------- */
 function bronze() {
-  const g = nid();
+  const g = nid(); const r = nid();
   return `
   <defs>
-    <linearGradient id="${g}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#c98f5a"/><stop offset="0.5" stop-color="#9b6236"/><stop offset="1" stop-color="#6d4222"/>
-    </linearGradient>
+    ${metal(g, M.goldHi, M.gold, M.goldLo)}
+    <radialGradient id="${r}" cx="0.5" cy="0.36">
+      <stop offset="0" stop-color="#2A2E36"/><stop offset="1" stop-color="${M.onyx}"/>
+    </radialGradient>
   </defs>
-  <circle cx="50" cy="50" r="40" fill="url(#${g})"/>
-  <circle cx="50" cy="50" r="40" fill="none" stroke="#3f2513" stroke-width="3"/>
-  <circle cx="50" cy="50" r="31" fill="none" stroke="#e2b184" stroke-width="1.6" opacity="0.55"/>
-  <path d="M36 51 L46 61 L66 40" fill="none" stroke="#f3ddc7" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  <path d="M50 8l34 13v25c0 19-14 33-34 42-20-9-34-23-34-42V21z" fill="url(#${g})"/>
+  <path d="M50 15l27 10.5v20c0 15-11 26-27 33-16-7-27-18-27-33v-20z" fill="url(#${r})"/>
+  <path d="M36 51l10 10 20-22" fill="none" stroke="url(#${g})" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`;
 }
 
 /* ---------------------------------------------------------------------------
-   TIER 2 — Momentum. Brushed steel, studded rim, a forward chevron.
+   TIER 2 — Momentum. A dark steel medallion with the ascent chevron.
    ------------------------------------------------------------------------- */
 function steel() {
-  const g = nid(); const s = nid();
-  const studs = ring(12, 35).map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.7" fill="#cfe0ee" opacity="0.75"/>`).join('');
+  const g = nid(); const c = nid();
+  const studs = ring(16, 40).map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.3" fill="${M.steelHi}" opacity="0.5"/>`).join('');
   return `
   <defs>
-    <linearGradient id="${g}" x1="0.1" y1="0" x2="0.9" y2="1">
-      <stop offset="0" stop-color="#e8f1f8"/><stop offset="0.35" stop-color="#93a8bb"/>
-      <stop offset="0.65" stop-color="#5d7488"/><stop offset="1" stop-color="#8fa6ba"/>
-    </linearGradient>
-    <linearGradient id="${s}" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.9"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.1"/>
-    </linearGradient>
+    ${metal(g, M.steelHi, M.steel, M.steelLo)}
+    ${metal(c, M.goldHi, M.gold, M.goldLo)}
   </defs>
-  <circle cx="50" cy="50" r="41" fill="url(#${g})"/>
-  <circle cx="50" cy="50" r="41" fill="none" stroke="#2f3f4d" stroke-width="3"/>
+  <circle cx="50" cy="50" r="45" fill="url(#${g})"/>
+  <circle cx="50" cy="50" r="45" fill="none" stroke="${M.ink}" stroke-width="2" opacity="0.6"/>
+  <circle cx="50" cy="50" r="36" fill="${M.onyx}"/>
   ${studs}
-  <circle cx="50" cy="50" r="28" fill="#33445473"/>
-  <path d="M34 62 L50 40 L66 62" fill="none" stroke="url(#${s})" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M34 72 L50 50 L66 72" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
+  <circle cx="50" cy="50" r="36" fill="none" stroke="url(#${g})" stroke-width="1.4" opacity="0.7"/>
+  <path d="M32 62L50 36l18 26" fill="none" stroke="url(#${c})" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M38 70L50 52l12 18" fill="none" stroke="url(#${c})" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>`;
 }
 
 /* ---------------------------------------------------------------------------
-   TIER 3 — Consistency. Gold, radiating, a laurel and a star.
+   TIER 3 — Consistency. A steel compass star inside a hexagon.
    ------------------------------------------------------------------------- */
 function gold() {
-  const g = nid(); const r = nid();
-  const rays = ring(24, 46).map(([x, y], i) => (i % 2
-    ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.4" fill="#ffe9a8" opacity="0.8"/>`
-    : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.4" fill="#ffd25e" opacity="0.9"/>`)).join('');
+  const g = nid(); const h = nid();
+  const hex = ring(6, 44, 50, 50, -90).map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const hexIn = ring(6, 35, 50, 50, -90).map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
   return `
   <defs>
-    <radialGradient id="${r}" cx="0.5" cy="0.35">
-      <stop offset="0" stop-color="#fff6cf"/><stop offset="0.55" stop-color="#f2b731"/><stop offset="1" stop-color="#9a6a06"/>
-    </radialGradient>
-    <linearGradient id="${g}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fff3c0"/><stop offset="1" stop-color="#d99612"/>
-    </linearGradient>
+    ${metal(g, M.steelHi, M.steel, M.steelLo)}
+    ${metal(h, M.goldHi, M.gold, M.goldLo)}
   </defs>
-  <g class="bx-spin-slow" style="transform-origin:50px 50px">${rays}</g>
-  <circle cx="50" cy="50" r="37" fill="url(#${r})"/>
-  <circle cx="50" cy="50" r="37" fill="none" stroke="#7d5300" stroke-width="2.5"/>
-  <circle cx="50" cy="50" r="29" fill="none" stroke="#fff2c4" stroke-width="1.4" opacity="0.7"/>
-  <polygon points="${star(50, 49, 20)}" fill="url(#${g})" stroke="#8a5c00" stroke-width="1.2" stroke-linejoin="round"/>
-  <path d="M28 66 q8 10 22 10 q14 0 22 -10" fill="none" stroke="#fff0bb" stroke-width="2" opacity="0.5"/>`;
+  <polygon points="${hex}" fill="url(#${g})" stroke="${M.ink}" stroke-width="1.6" stroke-linejoin="round"/>
+  <polygon points="${hexIn}" fill="${M.onyx}"/>
+  <polygon points="${star(50, 50, 26, 4, 0.30)}" fill="url(#${h})"/>
+  <polygon points="${star(50, 50, 15, 4, 0.34)}" fill="${M.steelHi}" opacity="0.55" transform="rotate(45 50 50)"/>
+  <circle cx="50" cy="50" r="4" fill="${M.onyx}" stroke="url(#${h})" stroke-width="1.4"/>`;
 }
 
 /* ---------------------------------------------------------------------------
-   TIER 4 — Discipline. Platinum shield, cut gem, faceted. The prestige gate.
+   TIER 4 — Discipline. A platinum hexagon holding a cut diamond. The
+   prestige gate, so it is visibly a step up in construction.
    ------------------------------------------------------------------------- */
 function platinum() {
-  const g = nid(); const gem = nid(); const glow = nid();
-  const studs = ring(8, 40).map(([x, y]) => `<polygon points="${star(x, y, 3.4, 4, 0.35)}" fill="#d8fbff" opacity="0.85"/>`).join('');
+  const g = nid(); const d = nid(); const glow = nid();
+  const hex = ring(6, 45, 50, 50, -90).map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const hexIn = ring(6, 37, 50, 50, -90).map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const pips = ring(6, 41, 50, 50, -60).map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.6" fill="${M.goldHi}" opacity="0.85"/>`).join('');
   return `
   <defs>
-    <linearGradient id="${g}" x1="0.2" y1="0" x2="0.8" y2="1">
-      <stop offset="0" stop-color="#f3fbff"/><stop offset="0.4" stop-color="#a9c6d4"/>
-      <stop offset="0.7" stop-color="#4f7488"/><stop offset="1" stop-color="#c2dae6"/>
-    </linearGradient>
-    <linearGradient id="${gem}" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#8ff4e6"/><stop offset="0.45" stop-color="#22c1c3"/><stop offset="1" stop-color="#0b6b8f"/>
-    </linearGradient>
+    ${metal(g, '#FFFFFF', M.steel, M.steelLo)}
+    ${metal(d, M.steelHi, M.steel, '#5B636E')}
     <radialGradient id="${glow}" cx="0.5" cy="0.5">
-      <stop offset="0" stop-color="#7ef0ff" stop-opacity="0.55"/><stop offset="1" stop-color="#7ef0ff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="${M.steelHi}" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="${M.steelHi}" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <circle cx="50" cy="50" r="48" fill="url(#${glow})" class="bx-pulse"/>
-  <g class="bx-spin-slow" style="transform-origin:50px 50px">${studs}</g>
-  <path d="M50 10 L84 26 V52 Q84 76 50 90 Q16 76 16 52 V26 Z" fill="url(#${g})" stroke="#2a4353" stroke-width="2.6" stroke-linejoin="round"/>
-  <path d="M50 17 L78 30 V52 Q78 71 50 83 Q22 71 22 52 V30 Z" fill="#16303d" opacity="0.55"/>
-  <polygon points="50,32 66,50 50,72 34,50" fill="url(#${gem})" stroke="#d9fbff" stroke-width="1.6" stroke-linejoin="round"/>
-  <polygon points="50,32 58,50 50,52 42,50" fill="#ffffff" opacity="0.45"/>
-  <polygon points="34,50 50,52 50,72" fill="#000000" opacity="0.18"/>`;
+  <circle cx="50" cy="50" r="49" fill="url(#${glow})" class="bx-pulse"/>
+  <polygon points="${hex}" fill="url(#${g})" stroke="${M.ink}" stroke-width="1.8" stroke-linejoin="round"/>
+  <polygon points="${hexIn}" fill="${M.onyx}"/>
+  ${pips}
+  <polygon points="50,26 68,45 50,74 32,45" fill="url(#${d})" stroke="${M.steelHi}" stroke-width="1.4" stroke-linejoin="round"/>
+  <polygon points="50,26 59,45 50,49 41,45" fill="#FFFFFF" opacity="0.5"/>
+  <polygon points="32,45 50,49 50,74" fill="${M.ink}" opacity="0.28"/>
+  <polygon points="68,45 50,49 50,74" fill="${M.ink}" opacity="0.12"/>`;
 }
 
 /* ---------------------------------------------------------------------------
-   TIER 5 — Relentless. Prismatic, crowned, shimmering. The top of the month.
+   TIER 5 — Relentless. The gold crown. Top of the month, and it looks it.
    ------------------------------------------------------------------------- */
 function prismatic() {
   const g = nid(); const sh = nid(); const glow = nid();
-  const spikes = ring(16, 47).map(([x, y], i) => `<polygon points="${star(x, y, i % 2 ? 2.2 : 4, 4, 0.3)}" fill="#ffffff" opacity="${i % 2 ? 0.5 : 0.85}"/>`).join('');
+  const sparks = ring(12, 46).map(([x, y], i) => `<polygon points="${star(x, y, i % 2 ? 1.8 : 3.2, 4, 0.22)}" fill="${M.goldHi}" opacity="${i % 2 ? 0.45 : 0.9}"/>`).join('');
   return `
   <defs>
-    <linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ff7bd5"/><stop offset="0.25" stop-color="#8b7bff"/>
-      <stop offset="0.5" stop-color="#3fd6ff"/><stop offset="0.75" stop-color="#5cffc0"/>
-      <stop offset="1" stop-color="#ffd86b"/>
-    </linearGradient>
+    ${metal(g, M.goldHi, M.gold, M.goldLo)}
     <linearGradient id="${sh}" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.5" stop-color="#fff" stop-opacity="0.85"/>
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#fff" stop-opacity="0.8"/>
       <stop offset="1" stop-color="#fff" stop-opacity="0"/>
     </linearGradient>
-    <radialGradient id="${glow}" cx="0.5" cy="0.5">
-      <stop offset="0.55" stop-color="#c9a6ff" stop-opacity="0.5"/><stop offset="1" stop-color="#c9a6ff" stop-opacity="0"/>
+    <radialGradient id="${glow}" cx="0.5" cy="0.55">
+      <stop offset="0.45" stop-color="${M.gold}" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="${M.gold}" stop-opacity="0"/>
     </radialGradient>
-    <clipPath id="${sh}c"><circle cx="50" cy="50" r="34"/></clipPath>
+    <clipPath id="${sh}c"><circle cx="50" cy="50" r="40"/></clipPath>
   </defs>
   <circle cx="50" cy="50" r="50" fill="url(#${glow})" class="bx-pulse"/>
-  <g class="bx-spin" style="transform-origin:50px 50px">${spikes}</g>
-  <circle cx="50" cy="50" r="38" fill="url(#${g})" class="bx-hue"/>
-  <circle cx="50" cy="50" r="38" fill="none" stroke="#ffffff" stroke-width="2.4" opacity="0.9"/>
-  <circle cx="50" cy="50" r="34" fill="#1a1030" opacity="0.55"/>
-  <g clip-path="url(#${sh}c)"><rect class="bx-sheen" x="-60" y="0" width="45" height="100" fill="url(#${sh})"/></g>
-  <path d="M31 60 L31 42 L40 50 L50 37 L60 50 L69 42 L69 60 Z" fill="url(#${g})" stroke="#fff" stroke-width="1.8" stroke-linejoin="round" class="bx-hue"/>
-  <rect x="31" y="63" width="38" height="5" rx="2.5" fill="url(#${g})" stroke="#fff" stroke-width="1.4" class="bx-hue"/>
-  <polygon points="${star(50, 30, 4.5)}" fill="#fff"/>`;
+  <g class="bx-spin-slow" style="transform-origin:50px 50px">${sparks}</g>
+  <circle cx="50" cy="50" r="40" fill="${M.onyx}" stroke="url(#${g})" stroke-width="2.4"/>
+  <g clip-path="url(#${sh}c)"><rect class="bx-sheen" x="-60" y="0" width="42" height="100" fill="url(#${sh})"/></g>
+  <path d="M28 63V38l11 9 11-15 11 15 11-9v25z" fill="url(#${g})" stroke="${M.goldLo}" stroke-width="1.2" stroke-linejoin="round"/>
+  <rect x="28" y="66" width="44" height="6" rx="1.5" fill="url(#${g})" stroke="${M.goldLo}" stroke-width="1"/>
+  <circle cx="39" cy="45" r="2.4" fill="${M.onyx}"/>
+  <circle cx="50" cy="40" r="2.4" fill="${M.onyx}"/>
+  <circle cx="61" cy="45" r="2.4" fill="${M.onyx}"/>`;
 }
 
 /* ---------------------------------------------------------------------------
-   SECOND WIND — the guardrail badge. Warm, upward, unmistakably positive.
+   SECOND WIND — the guardrail badge. Bronze, upward, unmistakably positive.
    ------------------------------------------------------------------------- */
 function comeback() {
   const g = nid(); const glow = nid();
   return `
   <defs>
-    <linearGradient id="${g}" x1="0" y1="1" x2="0.4" y2="0">
-      <stop offset="0" stop-color="#ff8a4c"/><stop offset="0.55" stop-color="#ffc14d"/><stop offset="1" stop-color="#7ef0a0"/>
-    </linearGradient>
-    <radialGradient id="${glow}" cx="0.5" cy="0.65">
-      <stop offset="0" stop-color="#ffb066" stop-opacity="0.5"/><stop offset="1" stop-color="#ffb066" stop-opacity="0"/>
+    ${metal(g, M.bronzeHi, M.bronze, M.bronzeLo)}
+    <radialGradient id="${glow}" cx="0.5" cy="0.6">
+      <stop offset="0" stop-color="${M.bronzeHi}" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="${M.bronzeHi}" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <circle cx="50" cy="50" r="47" fill="url(#${glow})" class="bx-pulse"/>
-  <circle cx="50" cy="50" r="38" fill="#241a12"/>
-  <circle cx="50" cy="50" r="38" fill="none" stroke="url(#${g})" stroke-width="4"/>
-  <path d="M26 68 Q34 40 50 44 Q66 48 74 30" fill="none" stroke="url(#${g})" stroke-width="6.5" stroke-linecap="round"/>
-  <path d="M63 29 L76 27 L74 40" fill="none" stroke="#7ef0a0" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="50" cy="44" r="4" fill="#fff"/>`;
+  <circle cx="50" cy="50" r="48" fill="url(#${glow})" class="bx-pulse"/>
+  <circle cx="50" cy="50" r="41" fill="${M.onyx}" stroke="url(#${g})" stroke-width="3"/>
+  <circle cx="50" cy="50" r="34" fill="none" stroke="url(#${g})" stroke-width="1" opacity="0.35"/>
+  <path d="M28 66Q38 42 52 48Q64 53 72 33" fill="none" stroke="url(#${g})" stroke-width="6" stroke-linecap="round"/>
+  <path d="M61 32l13-2-1 13" fill="none" stroke="url(#${g})" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`;
 }
 
 /* ---------------------------------------------------------------------------
-   META 3 — Ember. Living fire.
+   META 3 — Ember. Bronze medallion, living flame.
    ------------------------------------------------------------------------- */
 function ember() {
-  const g = nid(); const c = nid(); const glow = nid();
+  const g = nid(); const f = nid(); const glow = nid();
   return `
   <defs>
-    <linearGradient id="${g}" x1="0" y1="1" x2="0" y2="0">
-      <stop offset="0" stop-color="#ff3d2e"/><stop offset="0.45" stop-color="#ff8b1f"/><stop offset="1" stop-color="#ffe36b"/>
-    </linearGradient>
-    <linearGradient id="${c}" x1="0" y1="1" x2="0" y2="0">
-      <stop offset="0" stop-color="#ffd15c"/><stop offset="1" stop-color="#fff6d4"/>
+    ${metal(g, M.bronzeHi, M.bronze, M.bronzeLo)}
+    <linearGradient id="${f}" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#8A3B06"/><stop offset="0.45" stop-color="${M.bronze}"/>
+      <stop offset="1" stop-color="${M.goldHi}"/>
     </linearGradient>
     <radialGradient id="${glow}" cx="0.5" cy="0.6">
-      <stop offset="0" stop-color="#ff7a1f" stop-opacity="0.65"/><stop offset="1" stop-color="#ff7a1f" stop-opacity="0"/>
+      <stop offset="0" stop-color="#C97A18" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#C97A18" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <circle cx="50" cy="50" r="50" fill="url(#${glow})" class="bx-pulse"/>
-  <circle cx="50" cy="50" r="39" fill="#1c0d06" stroke="url(#${g})" stroke-width="3.5"/>
+  <circle cx="50" cy="50" r="42" fill="${M.ink}" stroke="url(#${g})" stroke-width="3"/>
   <g class="bx-flicker">
-    <path d="M50 18 C64 34 70 44 70 55 A20 20 0 0 1 30 55 C30 42 42 38 44 26 C52 33 50 40 50 18 Z" fill="url(#${g})"/>
-    <path d="M50 40 C57 49 59 53 59 59 A9 9 0 0 1 41 59 C41 52 47 50 50 40 Z" fill="url(#${c})"/>
+    <path d="M50 20c14 16 20 26 20 37a20 20 0 01-40 0c0-13 12-17 14-29 8 7 6 14 6-8z" fill="url(#${f})"/>
+    <path d="M50 42c7 9 9 13 9 19a9 9 0 01-18 0c0-7 6-9 9-19z" fill="${M.goldHi}" opacity="0.9"/>
   </g>
-  <text x="50" y="87" text-anchor="middle" font-size="13" font-weight="800" fill="#ffd9a1" font-family="system-ui,sans-serif">3</text>`;
+  <text x="50" y="90" text-anchor="middle" font-size="12" font-weight="700" fill="${M.bronzeHi}" font-family="system-ui,sans-serif" letter-spacing="1">III</text>`;
 }
 
 /* ---------------------------------------------------------------------------
-   META 6 — Aurora. Orbiting, colour-shifting, cold and beautiful.
+   META 6 — Aurora. A gold orbit ring around an onyx core.
    ------------------------------------------------------------------------- */
 function aurora() {
-  const g = nid(); const g2 = nid(); const glow = nid();
-  const stars = ring(20, 47).map(([x, y], i) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${i % 3 ? 1 : 1.9}" fill="#dff6ff" opacity="${i % 3 ? 0.45 : 0.9}"/>`).join('');
+  const g = nid(); const glow = nid();
+  const stars = ring(18, 47).map(([x, y], i) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${i % 3 ? 0.9 : 1.7}" fill="${M.goldHi}" opacity="${i % 3 ? 0.35 : 0.85}"/>`).join('');
   return `
   <defs>
-    <linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#5cffc0"/><stop offset="0.4" stop-color="#3fd6ff"/>
-      <stop offset="0.75" stop-color="#8b7bff"/><stop offset="1" stop-color="#ff7bd5"/>
-    </linearGradient>
-    <linearGradient id="${g2}" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#5cffc0" stop-opacity="0.15"/><stop offset="0.5" stop-color="#8b7bff" stop-opacity="0.9"/>
-      <stop offset="1" stop-color="#3fd6ff" stop-opacity="0.15"/>
-    </linearGradient>
+    ${metal(g, M.goldHi, M.gold, M.goldLo)}
     <radialGradient id="${glow}" cx="0.5" cy="0.5">
-      <stop offset="0.4" stop-color="#54d6ff" stop-opacity="0.45"/><stop offset="1" stop-color="#54d6ff" stop-opacity="0"/>
+      <stop offset="0.35" stop-color="${M.gold}" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="${M.gold}" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <circle cx="50" cy="50" r="50" fill="url(#${glow})" class="bx-pulse"/>
   <g class="bx-spin-slow" style="transform-origin:50px 50px">${stars}</g>
-  <circle cx="50" cy="50" r="38" fill="#080c22" stroke="url(#${g})" stroke-width="3.5" class="bx-hue"/>
-  <g class="bx-hue">
-    <path d="M20 62 Q32 34 44 52 Q54 68 64 44 Q72 26 82 46" fill="none" stroke="url(#${g2})" stroke-width="9" stroke-linecap="round" opacity="0.95"/>
-    <path d="M20 70 Q32 46 44 62 Q54 76 64 56 Q72 40 82 58" fill="none" stroke="url(#${g2})" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
+  <circle cx="50" cy="50" r="30" fill="${M.ink}" stroke="url(#${g})" stroke-width="2.4"/>
+  <circle cx="50" cy="50" r="23" fill="none" stroke="${M.steelLo}" stroke-width="0.8" opacity="0.5"/>
+  <polygon points="${star(50, 50, 13, 4, 0.3)}" fill="url(#${g})"/>
+  <g class="bx-spin" style="transform-origin:50px 50px">
+    <ellipse cx="50" cy="50" rx="46" ry="15" fill="none" stroke="url(#${g})" stroke-width="2.6" transform="rotate(-22 50 50)"/>
+    <ellipse cx="50" cy="50" rx="46" ry="15" fill="none" stroke="${M.goldHi}" stroke-width="0.9" opacity="0.6" transform="rotate(-22 50 50)"/>
   </g>
-  <ellipse cx="50" cy="50" rx="44" ry="15" fill="none" stroke="#9fe8ff" stroke-width="1.6" opacity="0.55" transform="rotate(-22 50 50)" class="bx-spin"/>
-  <text x="50" y="88" text-anchor="middle" font-size="13" font-weight="800" fill="#bfe9ff" font-family="system-ui,sans-serif">6</text>`;
+  <text x="50" y="93" text-anchor="middle" font-size="11" font-weight="700" fill="${M.gold}" font-family="system-ui,sans-serif" letter-spacing="1">VI</text>`;
 }
 
 /* ---------------------------------------------------------------------------
-   META 12 — Eclipse. The rarest thing in the app. Black sun, gold corona.
+   META 12 — Eclipse. The rarest thing in the app: a black sun, gold corona.
    ------------------------------------------------------------------------- */
 function eclipse() {
   const g = nid(); const cor = nid(); const glow = nid();
-  const flares = ring(36, 44).map(([x, y], i) => {
-    const long = i % 3 === 0;
-    return `<polygon points="${star(x, y, long ? 6 : 2.6, 4, 0.18)}" fill="#ffd77a" opacity="${long ? 0.95 : 0.5}"/>`;
+  const flares = ring(40, 43).map(([x, y], i) => {
+    const long = i % 4 === 0;
+    return `<polygon points="${star(x, y, long ? 6.5 : 2.4, 4, 0.16)}" fill="${long ? M.goldHi : M.gold}" opacity="${long ? 0.95 : 0.45}"/>`;
   }).join('');
-  const sparks = ring(7, 30, 50, 50, -70).map(([x, y]) => `<polygon points="${star(x, y, 3, 4, 0.22)}" fill="#fff8e0"/>`).join('');
   return `
   <defs>
     <radialGradient id="${cor}" cx="0.5" cy="0.5">
-      <stop offset="0.52" stop-color="#ffcf5c" stop-opacity="0"/>
-      <stop offset="0.6" stop-color="#ffcf5c" stop-opacity="0.95"/>
-      <stop offset="0.72" stop-color="#ff8a2b" stop-opacity="0.5"/>
-      <stop offset="1" stop-color="#ff5c2b" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="${M.gold}" stop-opacity="0"/>
+      <stop offset="0.585" stop-color="${M.goldHi}" stop-opacity="1"/>
+      <stop offset="0.68" stop-color="${M.gold}" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="${M.bronzeLo}" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="${glow}" cx="0.5" cy="0.5">
-      <stop offset="0.3" stop-color="#ffb43a" stop-opacity="0.5"/><stop offset="1" stop-color="#ff5c2b" stop-opacity="0"/>
+      <stop offset="0.3" stop-color="${M.gold}" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="${M.gold}" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#fff3c4"/><stop offset="0.5" stop-color="#ffc247"/><stop offset="1" stop-color="#c07a10"/>
-    </linearGradient>
+    ${metal(g, M.goldHi, M.gold, M.goldLo)}
   </defs>
   <circle cx="50" cy="50" r="50" fill="url(#${glow})" class="bx-pulse"/>
   <g class="bx-spin" style="transform-origin:50px 50px">${flares}</g>
   <circle cx="50" cy="50" r="46" fill="url(#${cor})"/>
-  <g class="bx-spin-rev" style="transform-origin:50px 50px">${sparks}</g>
-  <circle cx="50" cy="50" r="26" fill="#05040a"/>
-  <circle cx="50" cy="50" r="26" fill="none" stroke="url(#${g})" stroke-width="2.6"/>
-  <circle cx="50" cy="50" r="26" fill="none" stroke="#fff" stroke-width="1" opacity="0.35"/>
-  <text x="50" y="55" text-anchor="middle" font-size="19" font-weight="900" fill="url(#${g})" font-family="system-ui,sans-serif">12</text>`;
+  <circle cx="50" cy="50" r="27" fill="${M.ink}"/>
+  <circle cx="50" cy="50" r="27" fill="none" stroke="url(#${g})" stroke-width="2.2"/>
+  <circle cx="50" cy="50" r="23" fill="none" stroke="${M.goldHi}" stroke-width="0.7" opacity="0.4"/>
+  <text x="50" y="56" text-anchor="middle" font-size="16" font-weight="700" fill="url(#${g})" font-family="system-ui,sans-serif" letter-spacing="0.5">XII</text>`;
 }
 
 const ART = { bronze, steel, gold, platinum, prismatic, comeback, ember, aurora, eclipse };

@@ -2,20 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Habit Ladder</title>
+  <title>Ascent</title>
 
   <!-- viewport-fit=cover lets the app paint under the notch and home indicator -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-  <meta name="description" content="A personal daily habit tracker with points, streaks and monthly tiers.">
-  <meta name="theme-color" content="#0e1016">
+  <meta name="description" content="Ascent — fitness, habits, legacy. Track habits, build streaks, earn badges.">
+  <meta name="theme-color" content="#0B0D11">
+  <meta name="color-scheme" content="dark">
 
   <!-- iOS: these are what make "Add to Home Screen" open full screen with no
        Safari chrome, like a real app -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Habits">
+  <meta name="apple-mobile-web-app-title" content="Ascent">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
+
+  <!-- Anton for display type, Inter for everything else. Both fall back to
+       the system face, so the app is fully legible before they land — and the
+       service worker caches them after the first online load, so it stays that
+       way offline. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap">
 
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
