@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Habit Ladder</title>
+
+  <!-- viewport-fit=cover lets the app paint under the notch and home indicator -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="description" content="A personal daily habit tracker with points, streaks and monthly tiers.">
+  <meta name="theme-color" content="#0e1016">
+
+  <!-- iOS: these are what make "Add to Home Screen" open full screen with no
+       Safari chrome, like a real app -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Habits">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+  <div id="app">
+    <!-- Five screens. Only one is visible at a time; each is filled in by ui.js. -->
+    <section class="screen active" id="screen-today"></section>
+    <section class="screen" id="screen-streaks"></section>
+    <section class="screen" id="screen-tiers"></section>
+    <section class="screen" id="screen-badges"></section>
+    <section class="screen" id="screen-history"></section>
+  </div>
+
+  <nav class="tabbar">
+    <button data-tab="today"   class="active"><span class="ico">✓</span>Log</button>
+    <button data-tab="streaks"><span class="ico">🔥</span>Streaks</button>
+    <button data-tab="tiers"><span class="ico">🪜</span>Tiers</button>
+    <button data-tab="badges"><span class="ico">🏅</span>Badges</button>
+    <button data-tab="history"><span class="ico">📈</span>History</button>
+  </nav>
+
+  <script type="module">
+    import { start } from './js/ui.js';
+    start();
+
+    /* The service worker is what makes the app open instantly and work with no
+       signal. It only registers on a real https address, so opening the file
+       locally just skips it harmlessly. */
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

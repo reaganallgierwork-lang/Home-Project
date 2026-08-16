@@ -1,0 +1,234 @@
+# Habit Ladder
+
+A personal daily habit tracker. Log your habits in a few taps, earn points from
+a fixed daily pot, keep a separate streak for every habit, and climb a ladder of
+monthly tiers with badges you keep forever.
+
+It is a web app that installs to your phone's home screen and works offline.
+There is nothing to buy, no account to make, and your data never leaves your
+phone.
+
+---
+
+## Getting it on your phone
+
+**You do this once.** It takes about five minutes.
+
+### 1. Turn on GitHub Pages
+
+1. Go to this repository on github.com.
+2. Click **Settings** (the tab along the top).
+3. In the left sidebar click **Pages**.
+4. Under **Source**, choose **GitHub Actions** from the dropdown.
+
+That's it — nothing to save, it applies immediately.
+
+### 2. Wait a minute
+
+Click the **Actions** tab at the top of the repository. You'll see a job called
+"Deploy to GitHub Pages" running. When the dot next to it turns green, the app
+is live.
+
+If nothing is running, click **Actions** → **Deploy to GitHub Pages** in the
+sidebar → **Run workflow**.
+
+### 3. Open it on your phone and save it
+
+Your app's address is:
+
+```
+https://reaganallgierwork-lang.github.io/home-project/
+```
+
+(It's also shown on the **Pages** settings screen once it's live.)
+
+**On iPhone** — open that link **in Safari** (this does not work in Chrome on
+iOS), tap the **Share** button at the bottom, scroll down, tap **Add to Home
+Screen**, then **Add**.
+
+**On Android** — open the link in Chrome, tap the **⋮** menu, tap **Add to Home
+screen**.
+
+You'll get an icon on your home screen. Opening it launches the app full
+screen with no browser bars, and it works with no signal.
+
+---
+
+## How the scoring actually works
+
+Worth reading once — it explains what you'll see happening.
+
+### The fixed pot
+
+**Every day is scored out of exactly 100 points.** Always. Your habits divide
+that 100 between them according to their weights.
+
+This matters because it means a day is always comparable to any other day.
+Adding a ninth habit doesn't make your days worth more — it just cuts the same
+100 points into more slices. Making "no alcohol" heavier doesn't inflate your
+score; it takes a bigger slice and leaves less for everything else.
+
+Sleep is rated 1–5 and scores proportionally: a 5 earns its full slice, a 3
+earns 60% of it.
+
+### Separate streaks
+
+Every habit keeps **its own** current streak and its own longest-ever streak.
+A glass of wine breaks your dry streak and touches nothing else. Your training
+streak, your McGill streak and your Bible streak all carry on untouched.
+
+### Picking it back up is worth more than keeping it going
+
+This is the part that does the real work.
+
+Each day you're off a habit, that habit's weight grows by 34% of its baseline,
+so it claims a bigger slice of the same 100 points:
+
+| Days off it | What it's worth |
+|---|---|
+| On it | Normal weight |
+| 1 day off | 1.34× weight |
+| 2 days off | 1.68× weight |
+| 3+ days off | 2× weight — the cap |
+
+**It stops at 2×, permanently.** That cap is deliberate: one lapsed habit can
+never swallow the day and leave the others meaningless. The longer you've been
+off something, the louder the app pulls you back to it — and because the pot is
+fixed, that pull is real points, not a made-up bonus.
+
+Once you're back on it, the extra weight melts away over three days rather than
+snapping back, so the comeback keeps paying for a bit.
+
+### The next-day comeback
+
+Two different things happen depending on how long you were off:
+
+- **Back on it the very next day** → you reclaim **half the points that habit
+  lost** on the day you missed. Miss a 20-point habit, do it tomorrow, get 10
+  points back. This is shown separately as "reclaimed", on top of the day's
+  score.
+- **Off it two days or more** → no reclaim. Instead you get the escalating
+  weight above, which keeps growing the longer you're away.
+
+They never both fire. Short slip, quick recovery, get the points back. Long
+lapse, restarting is what's worth more.
+
+### Monthly tiers
+
+Points accumulate through the month toward five tiers. Each threshold is a
+percentage of the month's **maximum possible** points, so it adapts to 28, 30
+and 31-day months automatically.
+
+| Tier | Needs | Note |
+|---|---|---|
+| Foundation | 25% | Very reachable |
+| Momentum | 45% | |
+| Consistency | 65% | |
+| **Discipline** | **80%** | **Counts toward prestige badges** |
+| Relentless | 92% | The top |
+
+Because misses reduce your total permanently, enough of them will put the top
+tier mathematically out of reach before the month ends. The app tells you when
+that's happened, and frames it as "aim for it next month" — because that's what
+it is. The rest of the month still counts and the lower tiers are still real.
+
+**There are no dead months.** If a month goes so badly that even Foundation is
+out of reach, the app opens a **Second Wind** goal — finish with 70% of
+everything still on the table and you earn a Second Wind badge. It's built from
+what's actually left, so it is always reachable, and it re-opens lower if things
+keep sliding. You can always still climb to something.
+
+### Badges
+
+At month end the tiers reset, but the badge you earned is yours permanently and
+lands in your collection.
+
+Hit **Discipline or higher** in back-to-back months and you build a chain.
+Consecutive qualifying months earn rare prestige badges:
+
+- **3 months → Ember**
+- **6 months → Aurora**
+- **12 months → Eclipse**
+
+Note that the chain qualifies at Discipline, not the top tier — one merely very
+good month won't break a year-long run.
+
+Badges get visibly more elaborate as they get rarer. Foundation is a plain
+bronze coin; Eclipse is a black sun with a rotating gold corona. You can tell
+rank at a glance.
+
+---
+
+## Changing things without touching code
+
+Tap the **⚙︎** in the top right of the log screen. From there you can:
+
+- **Add, rename or re-icon any habit** — "Tracked my food", "No photo-checking",
+  whatever you want. New habits start counting from the day you add them, so
+  you never get retroactive misses.
+- **Change any weight** with a slider. It shows you live what each habit is
+  worth per day.
+- **Retire a habit** — it stops counting from today but every past day keeps the
+  score it already had. This is almost always what you want instead of deleting.
+- **Change the daily pot, the escalation rate, the recovery window, and the
+  reclaim share.**
+- **Move any tier threshold.**
+- **Change which tier qualifies for the prestige chain.**
+- **Export a backup** and restore from one.
+
+Everything recalculates instantly, all the way back through your history.
+
+### Missed a day?
+
+Use the **‹** arrow at the top of the log screen to walk back to any past day
+and fill it in. Streaks, points and tiers all recompute from scratch every
+time, so a late entry genuinely repairs the streak it belonged to — it isn't
+cosmetic.
+
+---
+
+## Backing up
+
+Your data lives in your phone's browser storage. It survives closing the app and
+restarting the phone, but it will be lost if you clear your browser data or lose
+the device.
+
+**Settings → Export backup file** saves a `.json` file. Put it in iCloud Drive
+or Google Drive now and then. **Restore from backup** loads it back — that's
+also how you move everything to a new phone.
+
+---
+
+## For when you want to edit the code
+
+You don't need to, but everything is plain HTML/CSS/JavaScript with no build
+step, no framework and no dependencies. Edit a file on github.com and it's live
+on your phone about a minute later.
+
+| File | What's in it |
+|---|---|
+| `js/config.js` | **Start here.** Every dial, heavily commented — starting habits, weights, tier percentages, escalation rate, badge definitions. |
+| `js/engine.js` | All the maths: points, escalation, redemption, streaks, tiers, badges. Touches nothing on screen. |
+| `js/store.js` | Loading, saving, and editing your data. |
+| `js/ui.js` | The five screens and the settings sheet. |
+| `js/badges.js` | The badge artwork, drawn as SVG. |
+| `app.css` | All the styling. The colours are variables at the very top. |
+| `index.html` | The page shell and the tab bar. |
+| `sw.js` | Makes the app work offline. |
+
+### If your phone won't show the new version
+
+Open `sw.js` and change `habit-ladder-v1` to `habit-ladder-v2`. That tells every
+phone to throw away its cached copy. There's a comment in the file saying the
+same thing.
+
+### Running the tests
+
+The scoring rules are covered by a test suite — including a proof that no month
+can ever become mathematically dead.
+
+```
+cd test && node engine.test.mjs
+```
+
+Needs Node.js installed. 56 checks; all should pass.

@@ -1,0 +1,46 @@
+# Publishes the app to GitHub Pages every time you change a file.
+#
+# You do not need to understand this file. It runs on GitHub's computers, not
+# yours. Every time you edit and save anything in this repository, this takes
+# about a minute to put the new version live at your app's address — and your
+# phone picks it up the next time you open it.
+#
+# One-time setup is in README.md under "Getting it on your phone".
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - claude/habit-tracking-app-s5vfkg
+  workflow_dispatch:   # lets you re-publish by hand from the Actions tab
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# If you push twice quickly, let the newer one win rather than queueing.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # The app is plain HTML, CSS and JavaScript — there is nothing to build.
+      # We just hand the whole folder to Pages as-is.
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4
