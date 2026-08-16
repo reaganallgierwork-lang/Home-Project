@@ -83,17 +83,25 @@ function freshState() {
       emoji: h.emoji,
       type: h.type,
       weight: h.weight,
-      threshold: h.threshold ?? 3,
-      max: 5,
+      threshold: h.threshold ?? (h.inputStyle === 'counter' ? (h.max ?? 100) : 3),
+      max: h.max ?? 5,
+      step: h.step ?? 1,
+      unit: h.unit ?? '',
+      stepLabel: h.stepLabel ?? '',
+      inputStyle: h.inputStyle === 'counter' ? 'counter' : 'rating',
       archived: false,
+      archivedAt: null,
       /* Habits don't count against you before they existed. Starting everyone
          at today means day one is a clean slate. */
       createdAt: today,
     })),
-    /* log['2026-08-16'] = { habitId: value }  — binary 0/1, scale 1..5 */
+    /* log['2026-08-16'] = { habitId: value } — binary 0/1, rating 1..5,
+       counter = the running amount for that day (e.g. ounces so far) */
     log: {},
     /* celebration keys already shown, so a toast never fires twice */
     seen: [],
+    /* one-time data migrations already applied — see normalise() below */
+    migratedHydrationV1: true,
   };
 }
 
@@ -107,6 +115,7 @@ function normalise(raw) {
     habits: Array.isArray(raw.habits) && raw.habits.length ? raw.habits : base.habits,
     log: raw.log && typeof raw.log === 'object' ? raw.log : {},
     seen: Array.isArray(raw.seen) ? raw.seen : [],
+    migratedHydrationV1: !!raw.migratedHydrationV1,
   };
   s.habits = s.habits.map((h) => ({
     id: h.id || newId(),
@@ -116,6 +125,10 @@ function normalise(raw) {
     weight: Number.isFinite(+h.weight) && +h.weight > 0 ? +h.weight : 10,
     threshold: Number.isFinite(+h.threshold) ? +h.threshold : 3,
     max: Number.isFinite(+h.max) && +h.max > 1 ? +h.max : 5,
+    step: Number.isFinite(+h.step) && +h.step > 0 ? +h.step : 1,
+    unit: typeof h.unit === 'string' ? h.unit : '',
+    stepLabel: typeof h.stepLabel === 'string' ? h.stepLabel : '',
+    inputStyle: h.inputStyle === 'counter' ? 'counter' : 'rating',
     archived: !!h.archived,
     archivedAt: h.archivedAt || null,
     createdAt: h.createdAt || todayKey(),
@@ -123,6 +136,26 @@ function normalise(raw) {
   /* Percentages must be ascending for the ladder to make sense. */
   s.settings.tierPercents = (s.settings.tierPercents || DEFAULTS.tierPercents)
     .map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+
+  /* ---- one-time migration: Hydration moved from a tick box to counting
+     8oz cups toward a 150oz goal. A past "yes" day already scored full
+     points for the habit, exactly like fully hitting the new goal does, so
+     those days are carried over as maxed rather than losing their history.
+     Runs once per device, then never again — even if you switch Hydration
+     back to a tick box on purpose afterward. */
+  if (!s.migratedHydrationV1) {
+    const hab = s.habits.find((h) => h.name.trim().toLowerCase() === 'hydration' && h.type === 'binary');
+    if (hab) {
+      Object.assign(hab, {
+        type: 'scale', max: 150, threshold: 150, step: 8, unit: 'oz', stepLabel: 'cup', inputStyle: 'counter',
+      });
+      Object.keys(s.log).forEach((day) => {
+        if (s.log[day][hab.id]) s.log[day][hab.id] = 150;
+      });
+    }
+    s.migratedHydrationV1 = true;
+  }
+
   return s;
 }
 
@@ -191,9 +224,14 @@ export function addHabit(partial) {
     emoji: partial.emoji || '⭐',
     type: partial.type === 'scale' ? 'scale' : 'binary',
     weight: +partial.weight || 10,
-    threshold: +partial.threshold || 3,
-    max: 5,
+    threshold: Number.isFinite(+partial.threshold) ? +partial.threshold : 3,
+    max: Number.isFinite(+partial.max) && +partial.max > 0 ? +partial.max : 5,
+    step: Number.isFinite(+partial.step) && +partial.step > 0 ? +partial.step : 1,
+    unit: partial.unit || '',
+    stepLabel: partial.stepLabel || '',
+    inputStyle: partial.inputStyle === 'counter' ? 'counter' : 'rating',
     archived: false,
+    archivedAt: null,
     /* Starts counting from today. A habit you add on the 20th can never give
        you retroactive misses for the 1st through the 19th. */
     createdAt: todayKey(),

@@ -19,22 +19,38 @@
      name      what you see on the log screen
      emoji     the little icon beside it
      type      'binary' = did it / didn't do it
-               'scale'  = rate it 1-5 (like sleep quality)
+               'scale'  = a numeric habit, in one of two flavours (see
+                          inputStyle below)
      weight    how much this habit matters relative to the others.
                These are NOT points. They're shares of a fixed daily pot, so
                raising one habit's weight lowers everyone else's slice and the
                daily maximum always stays exactly 100.
-     threshold (scale habits only) the rating that counts as a "good day" for
-               streak purposes. Points still scale smoothly with the rating.
+     threshold (scale habits only) the value that counts as a "good day" for
+               streak purposes. Points still scale smoothly below it — this
+               is only the bar for keeping the streak alive.
+     inputStyle (scale habits only)
+               'rating'  = tap a number 1-5, like rating your sleep
+               'counter' = tap + / - to count up toward a goal, like ounces
+                           of water. Needs max (the goal), step (how much
+                           each tap adds) and unit.
+     max       (scale habits only) the top of the range — 5 for a rating,
+               or the goal amount for a counter (e.g. 150 for ounces).
+     step      (counter habits only) how much one tap adds, e.g. 8 for an
+               8oz cup.
+     unit      (counter habits only) shown after the number, e.g. 'oz'.
+     stepLabel (counter habits only) what one tap is called, e.g. 'cup'.
    ------------------------------------------------------------------------- */
 export const DEFAULT_HABITS = [
   { name: 'No alcohol',        emoji: '🚫',  type: 'binary', weight: 20 },
   { name: 'Training',          emoji: '🏋️',  type: 'binary', weight: 20 },
   { name: 'McGill Big Three',  emoji: '🧘',  type: 'binary', weight: 18 },
-  { name: 'Sleep quality',     emoji: '😴',  type: 'scale',  weight: 12, threshold: 3 },
+  { name: 'Sleep quality',     emoji: '😴',  type: 'scale',  weight: 12, threshold: 3, inputStyle: 'rating' },
   { name: 'Bible reading',     emoji: '📖',  type: 'binary', weight: 10 },
   { name: 'Protein target',    emoji: '🥩',  type: 'binary', weight: 10 },
-  { name: 'Hydration',         emoji: '💧',  type: 'binary', weight: 10 },
+  /* Hydration counts 8oz cups toward a 150oz daily goal. Each cup is worth
+     a pro-rata share of the habit's points (8/150 of it), and hitting the
+     full 150oz is what keeps the streak alive. */
+  { name: 'Hydration',         emoji: '💧',  type: 'scale',  weight: 10, max: 150, threshold: 150, step: 8, unit: 'oz', stepLabel: 'cup', inputStyle: 'counter' },
 ];
 
 /* ---------------------------------------------------------------------------

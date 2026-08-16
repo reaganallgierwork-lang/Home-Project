@@ -216,6 +216,21 @@ a { color: var(--accent); }
 .scale button.on { background: linear-gradient(160deg, var(--good), #2fd39a); color: #06231a; border-color: transparent; }
 .scale button.on.low { background: linear-gradient(160deg, #ffc46b, #ff9d4d); color: #3a1f00; }
 
+/* counter habits — tap +/- to count up toward a goal, e.g. cups of water */
+.counter { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 4px; }
+.counter .ctr-btn {
+  width: 44px; height: 44px; flex: none; border-radius: 12px;
+  border: 1.5px solid var(--line); background: var(--card-2);
+  font-weight: 800; font-size: 19px; color: var(--text);
+  display: grid; place-items: center; transition: transform .12s ease;
+}
+.counter .ctr-btn:active { transform: scale(.9); }
+.counter .ctr-btn.plus.maxed { opacity: .4; }
+.counter .fill { flex: 1; min-width: 0; }
+.counter .lbl { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--muted); margin-bottom: 5px; }
+.counter .lbl b { color: var(--text); font-size: 14px; font-weight: 700; }
+.counter .bar { height: 7px; }
+
 /* the little "worth more today" banner under a lapsed habit */
 .boost-note {
   margin: -4px 0 10px; padding: 9px 13px;

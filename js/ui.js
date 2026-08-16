@@ -140,24 +140,47 @@ function renderToday(state) {
           : 'The longer you\'re off it, the bigger the pull back.'}
       </div>` : '';
 
-    /* Tick boxes sit beside the name; the 1-5 picker gets its own full-width
-       row underneath so the buttons stay big enough to hit on a phone. */
-    const control = h.type === 'scale'
-      ? `<div class="scale" data-habit="${h.id}">${[1, 2, 3, 4, 5].map((n) => `
-          <button data-val="${n}" class="${row.value === n ? `on ${n < h.threshold ? 'low' : ''}` : ''}">${n}</button>`).join('')}</div>`
-      : `<button class="check ${row.success ? 'on' : ''}" data-habit="${h.id}" aria-label="${esc(h.name)}">✓</button>`;
+    /* Tick boxes sit beside the name. Both scale flavours get their own
+       full-width row underneath — the rating buttons, or a +/- counter for
+       things like counting cups of water toward a goal. */
+    let control;
+    if (h.type === 'scale' && h.inputStyle === 'counter') {
+      const amt = row.value || 0;
+      const cups = Math.round(amt / (h.step || 1));
+      const stepWord = h.stepLabel || 'tap';
+      const stepWordPlural = `${stepWord}${cups === 1 ? '' : 's'}`;
+      const unitTxt = h.unit ? ` ${esc(h.unit)}` : '';
+      control = `
+        <div class="counter" data-habit="${h.id}" data-max="${h.max}" data-step="${h.step}">
+          <button class="ctr-btn minus" data-dir="-1" aria-label="Remove a ${esc(stepWord)}">−</button>
+          <div class="fill">
+            <div class="lbl"><b>${cups} ${esc(stepWordPlural)}</b><span>${amt}${unitTxt} of ${h.max}${unitTxt}</span></div>
+            <div class="bar ${row.success ? 'good' : ''}"><i style="width:${(Math.min(1, amt / h.max) * 100).toFixed(1)}%"></i></div>
+          </div>
+          <button class="ctr-btn plus ${amt >= h.max ? 'maxed' : ''}" data-dir="1" aria-label="Add a ${esc(stepWord)}">+</button>
+        </div>`;
+    } else if (h.type === 'scale') {
+      control = `<div class="scale" data-habit="${h.id}">${[1, 2, 3, 4, 5].map((n) => `
+          <button data-val="${n}" class="${row.value === n ? `on ${n < h.threshold ? 'low' : ''}` : ''}">${n}</button>`).join('')}</div>`;
+    } else {
+      control = `<button class="check ${row.success ? 'on' : ''}" data-habit="${h.id}" aria-label="${esc(h.name)}">✓</button>`;
+    }
 
     /* On today we show the live streak; on a past day, the streak as it stood
        at the end of that day. */
     const streakNow = isToday
       ? (R.habitStats[h.id]?.current || 0)
       : (row.success ? row.streakEntering + 1 : 0);
+    /* Counter habits already show their own amount/goal in the control
+       below, so there's nothing to repeat here — only ratings need it. */
     const meta = [
       `<span class="${boosted ? 'up' : 'pts'}">${round(row.available)} pts</span>`,
       streakNow > 0 ? `<span class="flame">🔥 ${streakNow}</span>` : '',
-      h.type === 'scale' ? `<span>${row.value ? `rated ${row.value}/5` : 'rate 1–5'}</span>` : '',
+      h.type === 'scale' && h.inputStyle !== 'counter' ? `<span>${row.value ? `rated ${row.value}/5` : 'rate 1–5'}</span>` : '',
     ].filter(Boolean).join('');
 
+    /* "scaled" wraps both the 1-5 buttons and the counter onto their own
+       row below the name — the same layout need, so they share the class. */
     return `
       <div class="habit ${row.success ? 'done' : ''} ${boosted ? 'boosted' : ''} ${h.type === 'scale' ? 'scaled' : ''}">
         <div class="emoji">${esc(h.emoji)}</div>
@@ -195,6 +218,21 @@ function renderToday(state) {
       const id = b.parentElement.dataset.habit;
       const val = +b.dataset.val;
       store.setEntry(viewDay, id, store.getEntry(viewDay, id) === val ? null : val);
+      buzz();
+      refresh();
+    };
+  });
+  document.querySelectorAll('#screen-today .counter .ctr-btn').forEach((b) => {
+    b.onclick = () => {
+      const wrap = b.closest('.counter');
+      const id = wrap.dataset.habit;
+      const max = +wrap.dataset.max;
+      const step = +wrap.dataset.step || 1;
+      const cur = store.getEntry(viewDay, id) || 0;
+      const next = Math.max(0, Math.min(max, cur + (+b.dataset.dir) * step));
+      /* Back to zero means "not logged" again, same as every other habit —
+         not a real 0 worth remembering. */
+      store.setEntry(viewDay, id, next > 0 ? next : null);
       buzz();
       refresh();
     };
@@ -692,9 +730,16 @@ function openSettings() {
 }
 
 /** Add or edit one habit. */
+/** Which of the three input kinds a habit currently is, for the editor. */
+function habitKind(h) {
+  if (!h || h.type === 'binary') return 'binary';
+  return h.inputStyle === 'counter' ? 'counter' : 'rating';
+}
+
 function editHabit(id) {
   const state = store.get();
   const h = id ? state.habits.find((x) => x.id === id) : null;
+  const kind = habitKind(h);
 
   const close = modal(`
     <h3>${h ? 'Edit habit' : 'New habit'}</h3>
@@ -717,14 +762,42 @@ function editHabit(id) {
     <div class="field">
       <label>Type</label>
       <select id="hType">
-        <option value="binary" ${!h || h.type === 'binary' ? 'selected' : ''}>Did it / didn't (a tick box)</option>
-        <option value="scale" ${h?.type === 'scale' ? 'selected' : ''}>Rate it 1–5 (like sleep)</option>
+        <option value="binary" ${kind === 'binary' ? 'selected' : ''}>Did it / didn't (a tick box)</option>
+        <option value="rating" ${kind === 'rating' ? 'selected' : ''}>Rate it 1–5 (like sleep)</option>
+        <option value="counter" ${kind === 'counter' ? 'selected' : ''}>Count up to a goal (like ounces of water)</option>
       </select>
     </div>
-    <div class="field" id="thresholdField" style="display:${h?.type === 'scale' ? 'block' : 'none'}">
+    <div class="field" id="thresholdField" style="display:${kind === 'rating' ? 'block' : 'none'}">
       <label>Counts as a good day at</label>
       <input type="number" id="hThreshold" min="1" max="5" value="${h?.threshold ?? 3}">
       <div class="help">Points always scale smoothly with the rating; this is only the bar for the streak.</div>
+    </div>
+    <div id="counterFields" style="display:${kind === 'counter' ? 'block' : 'none'}">
+      <div class="row2">
+        <div class="field">
+          <label>Unit</label>
+          <input type="text" id="hUnit" value="${esc(h?.unit ?? 'oz')}" placeholder="oz">
+        </div>
+        <div class="field">
+          <label>Each tap adds</label>
+          <input type="number" id="hStep" min="0.1" step="0.1" value="${h?.step ?? 8}">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Goal to max out</label>
+          <input type="number" id="hGoal" min="1" value="${h?.max ?? 150}">
+        </div>
+        <div class="field">
+          <label>One tap is called a</label>
+          <input type="text" id="hStepLabel" value="${esc(h?.stepLabel ?? 'cup')}" placeholder="cup">
+        </div>
+      </div>
+      <div class="field">
+        <label>Counts as a good day at</label>
+        <input type="number" id="hCounterThreshold" min="1" value="${h?.threshold ?? h?.max ?? 150}">
+        <div class="help">Usually the same as the goal — reaching it is what keeps the streak alive. Points still scale smoothly below that, one tap at a time.</div>
+      </div>
     </div>
     <button class="btn primary" id="saveHabit">${h ? 'Save changes' : 'Add habit'}</button>
     ${h ? `
@@ -733,16 +806,37 @@ function editHabit(id) {
     <button class="btn ghost" id="cancelHabit">Cancel</button>
   `);
 
-  el('hType').onchange = () => { el('thresholdField').style.display = el('hType').value === 'scale' ? 'block' : 'none'; };
+  el('hType').onchange = () => {
+    const k = el('hType').value;
+    el('thresholdField').style.display = k === 'rating' ? 'block' : 'none';
+    el('counterFields').style.display = k === 'counter' ? 'block' : 'none';
+  };
 
   el('saveHabit').onclick = () => {
+    const k = el('hType').value;
     const patch = {
       name: el('hName').value.trim() || 'Untitled',
       emoji: el('hEmoji').value.trim() || '⭐',
       weight: Math.max(1, Math.min(40, +el('hWeight').value || 10)),
-      type: el('hType').value,
-      threshold: Math.max(1, Math.min(5, +el('hThreshold')?.value || 3)),
     };
+    if (k === 'binary') {
+      Object.assign(patch, { type: 'binary', inputStyle: 'rating' });
+    } else if (k === 'rating') {
+      Object.assign(patch, {
+        type: 'scale', inputStyle: 'rating', max: 5, step: 1, unit: '', stepLabel: '',
+        threshold: Math.max(1, Math.min(5, +el('hThreshold').value || 3)),
+      });
+    } else {
+      const goal = Math.max(1, +el('hGoal').value || 150);
+      Object.assign(patch, {
+        type: 'scale', inputStyle: 'counter',
+        max: goal,
+        step: Math.max(0.1, +el('hStep').value || 1),
+        unit: el('hUnit').value.trim(),
+        stepLabel: el('hStepLabel').value.trim() || 'tap',
+        threshold: Math.max(1, Math.min(goal, +el('hCounterThreshold').value || goal)),
+      });
+    }
     if (h) store.updateHabit(h.id, patch); else store.addHabit(patch);
     close();
     refresh();
