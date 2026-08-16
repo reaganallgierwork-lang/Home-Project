@@ -102,6 +102,8 @@ function freshState() {
     seen: [],
     /* one-time data migrations already applied — see normalise() below */
     migratedHydrationV1: true,
+    /* remembered screen state, e.g. the Data tab's last selection */
+    ui: {},
   };
 }
 
@@ -116,6 +118,9 @@ function normalise(raw) {
     log: raw.log && typeof raw.log === 'object' ? raw.log : {},
     seen: Array.isArray(raw.seen) ? raw.seen : [],
     migratedHydrationV1: !!raw.migratedHydrationV1,
+    /* Remembered screen state (which metric the Data tab was showing, etc).
+       Purely cosmetic — safe to be missing or stale. */
+    ui: raw.ui && typeof raw.ui === 'object' ? raw.ui : {},
   };
   s.habits = s.habits.map((h) => ({
     id: h.id || newId(),

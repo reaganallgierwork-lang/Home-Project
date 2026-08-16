@@ -10,7 +10,7 @@
    every phone to throw away the old copy and pull the new one.
    ========================================================================== */
 
-const CACHE = 'habit-ladder-v1';
+const CACHE = 'habit-ladder-v2';
 
 const FILES = [
   './',
@@ -22,6 +22,10 @@ const FILES = [
   './js/store.js',
   './js/badges.js',
   './js/config.js',
+  './js/metrics.js',
+  './js/metrics-habits.js',
+  './js/chart.js',
+  './js/analyze.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
 ];

@@ -25,6 +25,13 @@
   --pink:      #ff7bd5;
 
   --dot-miss:  #3d4964;   /* a missed day: visible, but never alarming */
+
+  /* Chart colours. These are NOT picked by eye — they're validated against the
+     card surface for lightness band, chroma and 3:1 contrast in each mode.
+     If you change them, re-validate rather than guessing.
+     This block is the DARK palette (see below for the light overrides). */
+  --series-1:  #c97a1e;   /* validated against the #1a1f2e dark card */
+  --grid:      #262d3f;
   --radius:    16px;
   --radius-lg: 22px;
   --pad:       16px;
@@ -39,6 +46,7 @@
     --bg: #f4f6fb; --bg-2: #ffffff; --card: #ffffff; --card-2: #eef1f8;
     --line: #d9e0ee; --text: #131722; --muted: #5c6780; --faint: #8b96ad;
     --dot-miss: #c3cddf;
+    --series-1: #c2570a; --grid: #e6ebf4;
     --shadow: 0 8px 24px rgba(20,30,60,.10);
   }
 }
@@ -116,10 +124,11 @@ a { color: var(--accent); }
 
 /* ------------------------------------------------------------- tab bar --- */
 
+/* Flex rather than a fixed column count, so adding a tab in ui.js's SCREENS
+   list just works instead of needing a matching CSS change here. */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-  display: grid; grid-template-columns: repeat(5, 1fr);
-  gap: 2px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  display: flex; gap: 2px; padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
   background: rgba(14,16,22,.82);
   backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   border-top: 1px solid var(--line);
@@ -127,12 +136,14 @@ a { color: var(--accent); }
 @media (prefers-color-scheme: light) { .tabbar { background: rgba(255,255,255,.88); } }
 
 .tabbar button {
+  flex: 1; min-width: 0;
   display: grid; justify-items: center; gap: 3px;
-  padding: 7px 2px; border-radius: 13px;
-  color: var(--faint); font-size: 10.5px; font-weight: 650;
+  padding: 7px 1px; border-radius: 13px;
+  color: var(--faint); font-size: 10px; font-weight: 650;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   transition: color .15s ease, background .15s ease;
 }
-.tabbar button .ico { font-size: 19px; line-height: 1; }
+.tabbar button .ico { font-size: 18px; line-height: 1; }
 .tabbar button.active { color: var(--accent); background: rgba(255,180,84,.10); }
 
 /* ------------------------------------------------------- the day header -- */
@@ -464,6 +475,127 @@ a { color: var(--accent); }
   0%   { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
   100% { transform: translateY(105vh) rotate(660deg); opacity: 0; }
 }
+
+/* ============================================================================
+   DATA TAB — filters, chart, stat tiles, table
+   ========================================================================== */
+
+/* segmented controls */
+.seg {
+  display: flex; gap: 3px; padding: 3px; margin-bottom: 12px;
+  background: var(--card-2); border: 1px solid var(--line); border-radius: 13px;
+}
+.seg button {
+  flex: 1; min-width: 0; padding: 9px 4px; border-radius: 10px;
+  font-size: 13.5px; font-weight: 650; color: var(--muted);
+  transition: background .15s ease, color .15s ease;
+}
+.seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.seg.small button { font-size: 11.5px; padding: 7px 3px; }
+.seg.tight { margin: 10px 0 0; }
+
+/* the one filter row, above everything it scopes */
+.filter-row { display: grid; gap: 8px; margin-bottom: 14px; }
+
+.picker {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 12px 14px; border-radius: var(--radius);
+  background: var(--card); border: 1px solid var(--line); text-align: left;
+}
+.picker .pk-ic { font-size: 21px; flex: none; }
+.picker .pk-tx { flex: 1; min-width: 0; }
+.picker .pk-tx b { display: block; font-size: 14.5px; font-weight: 700; }
+.picker .pk-tx span { font-size: 12px; color: var(--muted); }
+.picker .pk-ch { color: var(--faint); font-size: 13px; }
+
+/* hero figure + delta */
+.hero-wrap { margin-bottom: 6px; }
+.hero {
+  font-size: 40px; font-weight: 800; letter-spacing: -.025em; line-height: 1.05;
+  /* proportional figures: tabular-nums makes a big number look loose */
+}
+.hero-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.delta {
+  display: inline-flex; align-items: baseline; gap: 6px; margin-top: 9px;
+  padding: 5px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 750;
+}
+.delta span { font-weight: 500; color: var(--muted); font-size: 11.5px; }
+.delta.good { background: rgba(92,255,192,.12); color: var(--good); }
+.delta.bad  { background: rgba(255,180,84,.12); color: var(--accent); }
+.delta.flat { background: var(--card-2); color: var(--muted); }
+
+/* chart */
+.chart-host { margin-top: 14px; }
+.chart-svg { display: block; width: 100%; overflow: visible; touch-action: pan-y; }
+.chart-svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+.chart-grid { stroke: var(--grid); stroke-width: 1; }
+.chart-target { stroke: var(--muted); stroke-width: 1; opacity: .55; }
+.chart-target-label { fill: var(--faint); font-size: 9.5px; font-weight: 650; }
+.chart-ytick, .chart-xtick {
+  fill: var(--faint); font-size: 10px; font-variant-numeric: tabular-nums;
+}
+.chart-point-label { fill: var(--text); font-size: 11px; font-weight: 750; }
+.chart-line { fill: none; stroke: var(--series-1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart-area { fill: var(--series-1); opacity: .10; }
+.chart-bar  { fill: var(--series-1); }
+.chart-dot  { fill: var(--series-1); stroke: var(--card); stroke-width: 2; }
+.chart-bar.is-active { filter: brightness(1.25); }
+.chart-dot.is-active { r: 5; }
+.chart-cross { stroke: var(--muted); stroke-width: 1; opacity: .5; }
+.chart-hit { cursor: crosshair; }
+.chart-empty { padding: 40px 12px; text-align: center; color: var(--muted); font-size: 13.5px; }
+
+.chart-readout {
+  display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
+  min-height: 22px; margin-bottom: 2px;
+}
+.chart-readout b { font-size: 15px; font-weight: 750; }
+.chart-readout span { font-size: 12px; color: var(--muted); }
+
+/* stat tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(66px, 1fr)); gap: 7px; }
+.tile { text-align: center; padding: 11px 5px; background: var(--card-2); border-radius: 13px; }
+.tile b { display: block; font-size: 17px; font-weight: 800; letter-spacing: -.02em; }
+.tile span { font-size: 10px; color: var(--faint); text-transform: uppercase; letter-spacing: .05em; }
+
+/* the numbers behind the chart */
+.mini-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mini-table td { padding: 8px 4px; border-bottom: 1px solid var(--line); }
+.mini-table tr:last-child td { border-bottom: none; }
+.mini-table .num { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mini-table .dim { text-align: right; color: var(--faint); font-size: 11px; width: 46px; }
+
+/* the full data table */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; }
+.data-table { border-collapse: collapse; font-size: 12.5px; white-space: nowrap; min-width: 100%; }
+.data-table th, .data-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); }
+.data-table th {
+  position: sticky; top: 0; background: var(--card); z-index: 1;
+  font-size: 11px; font-weight: 700; color: var(--muted); cursor: pointer;
+}
+.data-table th.sorted { color: var(--accent); }
+.data-table td { font-variant-numeric: tabular-nums; }
+.data-table td.daycell { font-weight: 650; }
+.data-table td.dim { color: var(--faint); }
+.data-table tbody tr:active { background: var(--card-2); }
+
+/* metric picker sheet */
+.search {
+  width: 100%; padding: 12px 13px; border-radius: 12px; margin-bottom: 14px;
+  background: var(--card-2); border: 1px solid var(--line); color: var(--text);
+}
+.pick-group { margin-bottom: 16px; }
+.pick-head {
+  font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--faint); font-weight: 700; margin-bottom: 6px;
+}
+.pick-item {
+  display: flex; justify-content: space-between; align-items: center; width: 100%;
+  padding: 12px 13px; margin-bottom: 5px; border-radius: 12px;
+  background: var(--card); border: 1px solid var(--line); font-size: 14px; text-align: left;
+}
+.pick-item.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.pick-item b { font-size: 15px; }
 
 .empty { text-align: center; padding: 34px 18px; color: var(--muted); }
 .empty .big { font-size: 34px; margin-bottom: 8px; }

@@ -178,6 +178,45 @@ Tap the **⚙︎** in the top right of the log screen. From there you can:
 
 Everything recalculates instantly, all the way back through your history.
 
+---
+
+## The Data tab
+
+Everything you log is kept as raw numbers, and this tab is where you dig
+through them.
+
+**Trends** — pick anything you track and see it over time. The picker lists
+every habit automatically, each with up to three things to chart:
+
+- **Amount** — the actual number you entered. Ounces of water, sleep rating.
+- **Consistency** — what percentage of days you managed it.
+- **Points earned** — what it contributed to your score, which moves with the
+  dynamic weighting as well as with you.
+
+Plus your daily score and your clean-sweep rate for the day as a whole.
+
+Choose a window (7 days to all time), and the chart buckets it sensibly — by
+day for short windows, by week or month for long ones, and you can override
+that. Where it makes sense you can also switch between average, total, best and
+lowest. Tap or drag across the chart to read any point; the same numbers are
+listed underneath, so nothing is only reachable by hovering.
+
+Two honesty details worth knowing:
+
+- **The headline number is computed from days, not from the bars.** Averaging a
+  set of weekly averages weights a 2-day week the same as a 7-day one and
+  quietly reports the wrong number.
+- **A day you didn't log means different things for different metrics.** For
+  water or training it counts as zero, because not logging it means it didn't
+  happen — the same rule the scoring uses. For a 1–5 sleep rating it's left out
+  instead, because a night you forgot to rate wasn't a zero-quality night. The
+  tab tells you which rule is in force, and always shows how many days you
+  actually logged.
+
+**Table** — every day as a row, every habit as a column, sortable by any column,
+and an **Export as spreadsheet** button that hands you a CSV for Numbers, Excel
+or Google Sheets if you want to slice it yourself.
+
 ### Missed a day?
 
 Use the **‹** arrow at the top of the log screen to walk back to any past day
@@ -210,11 +249,31 @@ on your phone about a minute later.
 | `js/config.js` | **Start here.** Every dial, heavily commented — starting habits, weights, tier percentages, escalation rate, badge definitions. |
 | `js/engine.js` | All the maths: points, escalation, redemption, streaks, tiers, badges. Touches nothing on screen. |
 | `js/store.js` | Loading, saving, and editing your data. |
-| `js/ui.js` | The five screens and the settings sheet. |
+| `js/ui.js` | The screens, the tab bar and the settings sheet. |
 | `js/badges.js` | The badge artwork, drawn as SVG. |
+| `js/metrics.js` | The generic data layer behind the Data tab. **Read the comment at the top before adding a new kind of tracked data.** |
+| `js/metrics-habits.js` | Exposes habits to the Data tab. The reference example for writing another source. |
+| `js/chart.js` | The reusable chart. Knows nothing about habits. |
+| `js/analyze.js` | The Data tab itself. |
 | `app.css` | All the styling. The colours are variables at the very top. |
-| `index.html` | The page shell and the tab bar. |
+| `index.html` | The page shell. |
 | `sw.js` | Makes the app work offline. |
+
+### Adding a new tracker later (e.g. workouts)
+
+The app is built so a new area bolts on without rewriting anything:
+
+1. **Add a tab** — write `js/yourthing.js` with a `render(state)` function and
+   add one line to the `SCREENS` list at the top of `js/ui.js`. The tab bar and
+   the screen containers build themselves from that list.
+2. **Make it show up in the Data tab** — call `registerSource()` with a `list()`
+   that returns one metric per thing worth charting. The full contract, with a
+   worked workout-tracker example, is the comment block at the top of
+   `js/metrics.js`. Charts, ranges, bucketing, trends, stat tiles and CSV export
+   all start working with no further changes.
+
+Nothing in `analyze.js`, `chart.js` or `metrics.js` needs editing to add data —
+that's the whole point of the split.
 
 ### If your phone won't show the new version
 
@@ -228,7 +287,10 @@ The scoring rules are covered by a test suite — including a proof that no mont
 can ever become mathematically dead.
 
 ```
-cd test && node engine.test.mjs
+cd test
+node engine.test.mjs      # 56 checks — scoring, streaks, tiers, the guardrail
+node migration.test.mjs   # 11 checks — the hydration counter migration
+node metrics.test.mjs     # 44 checks — bucketing, aggregation, trends
 ```
 
-Needs Node.js installed. 56 checks; all should pass.
+Needs Node.js installed. All 111 should pass.

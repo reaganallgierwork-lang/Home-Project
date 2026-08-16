@@ -1,16 +1,27 @@
 /* ============================================================================
    UI — everything you see and tap.
    ----------------------------------------------------------------------------
-   Five screens (Today, Streaks, Tiers, Badges, History) plus a Settings sheet.
    The pattern is deliberately simple: any change saves, then the whole screen
    is redrawn from freshly computed numbers. No clever partial updates to get
    out of step with your data.
+
+   ---------------------------------------------------------------------------
+   ADDING A NEW TAB (e.g. the workout tracker)
+   ---------------------------------------------------------------------------
+   1. Write js/<yourthing>.js exporting a render(state) function.
+   2. Add one line to the SCREENS list below.
+   3. If it has data worth charting, also register a metric source (see the
+      contract at the top of metrics.js) and it appears in the Data tab with
+      no further work.
+   The tab bar builds itself from SCREENS, so nothing else needs touching.
    ========================================================================== */
 
 import * as store from './store.js';
 import { compute, celebrationsFor, weeklySeries } from './engine.js';
 import { renderBadge } from './badges.js';
 import { TIERS, META_BADGES } from './config.js';
+import './metrics-habits.js';          // registers the habits metric source
+import { renderAnalyze } from './analyze.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (id) => document.getElementById(id);
@@ -29,10 +40,21 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
    BOOT
    ========================================================================== */
 
+/* The tab bar and the screens, in order. Add to this list to add a tab. */
+const SCREENS = [
+  { id: 'today', label: 'Log', icon: '✓', render: (s) => renderToday(s) },
+  { id: 'streaks', label: 'Streaks', icon: '🔥', render: (s) => renderStreaks(s) },
+  { id: 'tiers', label: 'Tiers', icon: '🪜', render: (s) => renderTiers(s) },
+  { id: 'badges', label: 'Badges', icon: '🏅', render: (s) => renderBadges(s) },
+  { id: 'history', label: 'History', icon: '📈', render: (s) => renderHistory(s) },
+  { id: 'analyze', label: 'Data', icon: '🔎', render: (s) => renderAnalyze(s, refresh) },
+];
+
 export function start() {
   store.load();
   store.save();   // first run: write the starting habits down straight away
   document.body.insertAdjacentHTML('beforeend', '<div id="toasts"></div><div id="confetti"></div>');
+  buildShell();
   bindTabs();
   refresh();
 
@@ -42,6 +64,17 @@ export function start() {
     const t = store.todayKey();
     if (t !== R?.endDay) { viewDay = t; viewMonth = store.monthOf(t); refresh(); }
   });
+}
+
+/** Build the screen containers and the tab bar from SCREENS. */
+function buildShell() {
+  const app = el('app');
+  const nav = $('.tabbar');
+  app.innerHTML = SCREENS.map((s) => `<section class="screen${s.id === current ? ' active' : ''}" id="screen-${s.id}"></section>`).join('');
+  nav.innerHTML = SCREENS.map((s) => `
+    <button data-tab="${s.id}" class="${s.id === current ? 'active' : ''}">
+      <span class="ico">${s.icon}</span>${s.label}
+    </button>`).join('');
 }
 
 function bindTabs() {
@@ -60,13 +93,8 @@ function bindTabs() {
 export function refresh() {
   const state = store.get();
   R = compute(state);
-  ({
-    today: renderToday,
-    streaks: renderStreaks,
-    tiers: renderTiers,
-    badges: renderBadges,
-    history: renderHistory,
-  })[current](state);
+  const screen = SCREENS.find((s) => s.id === current) || SCREENS[0];
+  screen.render(state);
   fireCelebrations(state);
 }
 

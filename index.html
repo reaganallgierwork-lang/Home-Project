@@ -23,22 +23,10 @@
 </head>
 <body>
 
-  <div id="app">
-    <!-- Five screens. Only one is visible at a time; each is filled in by ui.js. -->
-    <section class="screen active" id="screen-today"></section>
-    <section class="screen" id="screen-streaks"></section>
-    <section class="screen" id="screen-tiers"></section>
-    <section class="screen" id="screen-badges"></section>
-    <section class="screen" id="screen-history"></section>
-  </div>
-
-  <nav class="tabbar">
-    <button data-tab="today"   class="active"><span class="ico">✓</span>Log</button>
-    <button data-tab="streaks"><span class="ico">🔥</span>Streaks</button>
-    <button data-tab="tiers"><span class="ico">🪜</span>Tiers</button>
-    <button data-tab="badges"><span class="ico">🏅</span>Badges</button>
-    <button data-tab="history"><span class="ico">📈</span>History</button>
-  </nav>
+  <!-- Both the screens and the tab bar are built by ui.js from its SCREENS
+       list, so adding a tab is a one-line change there rather than here. -->
+  <div id="app"></div>
+  <nav class="tabbar"></nav>
 
   <script type="module">
     import { start } from './js/ui.js';
