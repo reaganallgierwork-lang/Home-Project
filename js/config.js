@@ -107,6 +107,11 @@ export const DEFAULTS = {
 
   /* Streak lengths worth a celebration, in days. */
   streakMilestones: [3, 7, 14, 21, 30, 50, 75, 100, 150, 200, 365],
+
+  /* ---- Training ----
+     'lb' or 'kg'. Only a label — the app never converts, it just records the
+     number you type, so switch it before you start rather than partway. */
+  weightUnit: 'lb',
 };
 
 /* ---------------------------------------------------------------------------

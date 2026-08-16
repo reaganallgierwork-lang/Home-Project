@@ -21,7 +21,9 @@ import { compute, celebrationsFor, weeklySeries } from './engine.js';
 import { renderBadge } from './badges.js';
 import { TIERS, META_BADGES } from './config.js';
 import './metrics-habits.js';          // registers the habits metric source
+import './metrics-workouts.js';        // registers the training metric source
 import { renderAnalyze } from './analyze.js';
+import { renderTrain } from './train.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (id) => document.getElementById(id);
@@ -43,6 +45,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 /* The tab bar and the screens, in order. Add to this list to add a tab. */
 const SCREENS = [
   { id: 'today', label: 'Log', icon: '✓', render: (s) => renderToday(s) },
+  { id: 'train', label: 'Train', icon: '🏋️', render: (s) => renderTrain(s) },
   { id: 'streaks', label: 'Streaks', icon: '🔥', render: (s) => renderStreaks(s) },
   { id: 'tiers', label: 'Tiers', icon: '🪜', render: (s) => renderTiers(s) },
   { id: 'badges', label: 'Badges', icon: '🏅', render: (s) => renderBadges(s) },

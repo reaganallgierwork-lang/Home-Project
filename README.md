@@ -180,6 +180,59 @@ Everything recalculates instantly, all the way back through your history.
 
 ---
 
+## The Train tab
+
+### Building a workout
+
+**Build a workout** walks you through it — you never type anything you can pick
+instead. Add a block, choose what kind, and fill in the numbers:
+
+| Block | What it's for |
+|---|---|
+| **Straight sets** | One exercise for a number of sets. The everyday choice. |
+| **Superset** | Two or more exercises back to back, for a number of rounds. |
+| **AMRAP** | As many rounds as possible inside a time cap. |
+| **Rounds for time** | A set number of rounds against the clock, with a cap. |
+| **EMOM** | Every minute on the minute, for a number of minutes. |
+
+For straight sets you pick the exercise, tap the number of sets up or down, then
+choose **Same every set** (type the weight and reps once) or **Set
+individually** (a row per set, for pyramids and top sets). A workout can mix
+every block type freely — heavy squats, then a superset, then a 12-minute AMRAP.
+
+Name an AMRAP or a Rounds-for-time piece (say, "Fran") and the app charts that
+exact workout over time, so you can watch the same benchmark improve.
+
+Save it and it's in **My workouts**, ready to start again any time.
+
+### Doing a workout
+
+Tap **Start**, and you get the plan with the numbers already filled in. Adjust
+anything on the fly, tap the big ✓ as you finish each set, and the totals at the
+top update live. Timed pieces just ask for the result — rounds and extra reps
+for an AMRAP, a finish time for Rounds for time.
+
+You can add blocks mid-workout, reopen a finished session to fix something, move
+it to a different date, or save it out as a reusable workout. When you finish,
+it offers to tick your Training habit for that day.
+
+### Why every format still counts
+
+However you did the work, it's recorded against the exercise. Bench press done
+as straight sets, inside a superset, or as reps in an AMRAP all add to the same
+history — otherwise your record would be split across workout formats and none
+of it would mean much.
+
+Tap any exercise in the **library** (📚, top right) to see your heaviest set,
+estimated 1RM, and recent sessions.
+
+One deliberate limit: **estimated 1RM ignores metcon reps.** A 95 lb thruster in
+minute 11 of an AMRAP is real work, but running it through a 1RM formula would
+invent a max you never tested. Only deliberate sets of 12 reps or fewer feed the
+estimate.
+
+---
+
 ## The Data tab
 
 Everything you log is kept as raw numbers, and this tab is where you dig
@@ -194,6 +247,12 @@ every habit automatically, each with up to three things to chart:
   dynamic weighting as well as with you.
 
 Plus your daily score and your clean-sweep rate for the day as a whole.
+
+Every exercise you've actually trained gets its own group too — **heaviest set**,
+**estimated 1RM**, **volume** and **total reps** — along with whole-training
+metrics (total volume, sets performed, days trained) and any named metcon's
+time or rounds. That's the long game: pick "Bench Press → Estimated 1RM", set
+the range to **All time**, and watch it climb over the years.
 
 Choose a window (7 days to all time), and the chart buckets it sensibly — by
 day for short windows, by week or month for long ones, and you can override
@@ -252,9 +311,13 @@ on your phone about a minute later.
 | `js/ui.js` | The screens, the tab bar and the settings sheet. |
 | `js/badges.js` | The badge artwork, drawn as SVG. |
 | `js/metrics.js` | The generic data layer behind the Data tab. **Read the comment at the top before adding a new kind of tracked data.** |
-| `js/metrics-habits.js` | Exposes habits to the Data tab. The reference example for writing another source. |
-| `js/chart.js` | The reusable chart. Knows nothing about habits. |
+| `js/metrics-habits.js` | Exposes habits to the Data tab. |
+| `js/metrics-workouts.js` | Exposes training to the Data tab. |
+| `js/workouts.js` | The workout data model and maths — blocks, set records, 1RM, personal bests. No screen code. |
+| `js/train.js` | The Train tab: builder, logger, exercise library. |
+| `js/chart.js` | The reusable chart. Knows nothing about habits or lifts. |
 | `js/analyze.js` | The Data tab itself. |
+| `js/ids.js` | The shared id generator, kept separate so modules needn't import each other. |
 | `app.css` | All the styling. The colours are variables at the very top. |
 | `index.html` | The page shell. |
 | `sw.js` | Makes the app work offline. |
@@ -291,6 +354,7 @@ cd test
 node engine.test.mjs      # 56 checks — scoring, streaks, tiers, the guardrail
 node migration.test.mjs   # 11 checks — the hydration counter migration
 node metrics.test.mjs     # 44 checks — bucketing, aggregation, trends
+node workouts.test.mjs    # 49 checks — blocks, set records, 1RM, templates
 ```
 
-Needs Node.js installed. All 111 should pass.
+Needs Node.js installed. All 160 should pass.

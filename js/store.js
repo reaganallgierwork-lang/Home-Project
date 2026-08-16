@@ -7,6 +7,7 @@
    ========================================================================== */
 
 import { DEFAULT_HABITS, DEFAULTS } from './config.js';
+import { buildDefaultExercises } from './workouts.js';
 
 const KEY = 'habitforge.v1';
 
@@ -64,11 +65,13 @@ export function rangeDays(a, b) {
 
 /* ---------- ids ---------- */
 
-let idSeq = 0;
-export function newId() {
-  idSeq += 1;
-  return `h${Date.now().toString(36)}${idSeq.toString(36)}`;
-}
+/* Imported for use in here, and re-exported so existing callers keep working.
+   `export { newId } from './ids.js'` alone would NOT do — a re-export forwards
+   the name without binding it in this module's own scope, so every internal
+   call to newId() would throw. */
+import { newId } from './ids.js';
+
+export { newId };
 
 /* ---------- the state shape ---------- */
 
@@ -104,6 +107,14 @@ function freshState() {
     migratedHydrationV1: true,
     /* remembered screen state, e.g. the Data tab's last selection */
     ui: {},
+
+    /* ---- the training side ----
+       exercises  your catalogue — the thing history is tracked against
+       templates  workouts you've built and can start again
+       sessions   workouts you actually did, one per performance */
+    exercises: buildDefaultExercises(),
+    templates: [],
+    sessions: [],
   };
 }
 
@@ -121,7 +132,44 @@ function normalise(raw) {
     /* Remembered screen state (which metric the Data tab was showing, etc).
        Purely cosmetic — safe to be missing or stale. */
     ui: raw.ui && typeof raw.ui === 'object' ? raw.ui : {},
+
+    /* Training. A save from before the workout tracker existed has none of
+       these, so the exercise catalogue is seeded and the rest start empty. */
+    exercises: Array.isArray(raw.exercises) && raw.exercises.length ? raw.exercises : base.exercises,
+    templates: Array.isArray(raw.templates) ? raw.templates : [],
+    sessions: Array.isArray(raw.sessions) ? raw.sessions : [],
   };
+
+  s.exercises = s.exercises.map((e) => ({
+    id: e.id || newId(),
+    name: String(e.name ?? 'Untitled'),
+    category: e.category || 'Other',
+    track: ['weight_reps', 'reps', 'time', 'distance'].includes(e.track) ? e.track : 'weight_reps',
+    archived: !!e.archived,
+  }));
+  /* Sessions are the irreplaceable part — never silently drop a malformed one,
+     just make sure the fields the app reads always exist. */
+  s.sessions = s.sessions
+    .filter((x) => x && x.day)
+    .map((x) => ({
+      id: x.id || newId(),
+      day: x.day,
+      name: x.name || 'Workout',
+      templateId: x.templateId || null,
+      blocks: Array.isArray(x.blocks) ? x.blocks : [],
+      note: x.note || '',
+      startedAt: x.startedAt || null,
+      finishedAt: x.finishedAt || null,
+    }))
+    .sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : 0));
+  s.templates = s.templates
+    .filter((x) => x && Array.isArray(x.blocks))
+    .map((x) => ({
+      id: x.id || newId(),
+      name: x.name || 'Workout',
+      blocks: x.blocks,
+      createdAt: x.createdAt || Date.now(),
+    }));
   s.habits = s.habits.map((h) => ({
     id: h.id || newId(),
     name: String(h.name ?? 'Untitled'),
@@ -292,6 +340,63 @@ export function markSeen(keys) {
     /* Keep the list from growing forever. */
     if (s.seen.length > 800) s.seen = s.seen.slice(-500);
   });
+}
+
+/* ---------- training: exercises, templates, sessions ---------- */
+
+export function addExercise(partial) {
+  const e = {
+    id: newId(),
+    name: partial.name || 'New exercise',
+    category: partial.category || 'Other',
+    track: partial.track || 'weight_reps',
+    archived: false,
+  };
+  update((s) => s.exercises.push(e));
+  return e;
+}
+
+export function updateExercise(id, patch) {
+  update((s) => {
+    const e = s.exercises.find((x) => x.id === id);
+    if (e) Object.assign(e, patch);
+  });
+}
+
+/** Retiring keeps every session that used it intact; deleting would not. */
+export function archiveExercise(id, archived = true) {
+  updateExercise(id, { archived });
+}
+
+export function saveTemplate(template) {
+  update((s) => {
+    const i = s.templates.findIndex((t) => t.id === template.id);
+    if (i >= 0) s.templates[i] = template;
+    else s.templates.push(template);
+  });
+  return template;
+}
+
+export function deleteTemplate(id) {
+  update((s) => { s.templates = s.templates.filter((t) => t.id !== id); });
+}
+
+export function saveSession(session) {
+  update((s) => {
+    const i = s.sessions.findIndex((x) => x.id === session.id);
+    if (i >= 0) s.sessions[i] = session;
+    else s.sessions.unshift(session);
+    s.sessions.sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : 0));
+  });
+  return session;
+}
+
+export function deleteSession(id) {
+  update((s) => { s.sessions = s.sessions.filter((x) => x.id !== id); });
+}
+
+export function getSession(id) {
+  return get().sessions.find((s) => s.id === id) || null;
 }
 
 /* ---------- backup ---------- */

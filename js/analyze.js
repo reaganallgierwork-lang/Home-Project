@@ -17,6 +17,7 @@ import {
   RANGES, GRANULARITIES, AGG_LABELS,
 } from './metrics.js';
 import { habitTableColumns } from './metrics-habits.js';
+import { workoutTableColumns } from './metrics-workouts.js';
 import { renderChart } from './chart.js';
 
 const el = (id) => document.getElementById(id);
@@ -282,7 +283,9 @@ function openMetricPicker(state, metrics, current) {
    ========================================================================== */
 
 function renderTable(state, u) {
-  const cols = habitTableColumns(state);
+  /* Columns come from each area rather than being listed here, so a new
+     tracker adds its own without this screen changing. */
+  const cols = [...habitTableColumns(state), ...workoutTableColumns(state)];
   const earliest = earliestDay(state);
   const range = resolveRange(u.tableRange, earliest);
   const days = store.rangeDays(range.from, range.to);

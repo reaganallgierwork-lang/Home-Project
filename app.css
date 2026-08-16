@@ -597,6 +597,150 @@ a { color: var(--accent); }
 .pick-item.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }
 .pick-item b { font-size: 15px; }
 
+/* ============================================================================
+   TRAIN TAB
+   ========================================================================== */
+
+.btn.big { padding: 17px 16px; font-size: 16px; }
+
+.card.resume { display: flex; align-items: center; gap: 12px; }
+.card.resume .rz { flex: 1; min-width: 0; }
+.card.resume .rz b { display: block; font-size: 15px; }
+.card.resume .rz span { font-size: 12px; color: var(--accent); font-weight: 650; }
+.card.resume .btn { width: auto; padding: 11px 18px; }
+
+/* a workout / session row */
+.wcard {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 14px; margin-bottom: 9px;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.wcard:not(.static):active { transform: scale(.995); }
+.wcard .wc-body { flex: 1; min-width: 0; }
+.wcard .wc-name { font-weight: 700; font-size: 14.5px; }
+.wcard .wc-sub { font-size: 12px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wcard .wc-go {
+  flex: none; padding: 9px 15px; border-radius: 11px; font-size: 13px; font-weight: 750;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #2a1600;
+}
+.wcard .wc-edit, .wcard .wc-chev {
+  flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--card-2); border: 1px solid var(--line); color: var(--muted); font-size: 14px;
+}
+.wcard .wc-chev { background: none; border: none; font-size: 20px; }
+
+/* a block inside a workout */
+.block-card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 12px; margin-bottom: 11px;
+}
+.bc-head { display: flex; align-items: center; gap: 9px; }
+.bc-ic { font-size: 19px; }
+.bc-t { flex: 1; min-width: 0; }
+.bc-t b { display: block; font-size: 14.5px; font-weight: 700; }
+.bc-t span { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: .05em; }
+.bc-btn {
+  width: 30px; height: 30px; flex: none; border-radius: 9px;
+  background: var(--card-2); border: 1px solid var(--line);
+  color: var(--muted); font-size: 13px; display: grid; place-items: center;
+}
+.bc-btn:disabled { opacity: .3; }
+.bc-desc { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+
+/* set rows — the thing you tap most, so the targets are big */
+.set-row { display: flex; align-items: center; gap: 7px; margin-top: 7px; }
+/* Header labels sit in the same flex tracks as the inputs below them, so
+   "Weight" lands over the weight box. The number gutter and the tick column
+   are fixed-width; everything between them shares the space equally. */
+.set-row.head { margin-top: 10px; }
+.set-row.head span {
+  flex: 1; min-width: 0; text-align: center;
+  font-size: 10px; color: var(--faint); text-transform: uppercase; letter-spacing: .05em;
+}
+.set-row.head span:first-child { width: 34px; flex: none; }
+.set-row.head.log span:last-child { width: 44px; flex: none; }
+.set-row .sr-n {
+  width: 34px; flex: none; font-size: 11.5px; font-weight: 700; color: var(--faint);
+  text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Superset rows label each line with the exercise rather than a set number,
+   so that gutter needs real room. */
+.set-row.ss .sr-n { width: 86px; text-align: left; font-size: 11px; color: var(--muted); }
+.set-row input {
+  flex: 1; min-width: 0; padding: 11px 8px; border-radius: 11px; text-align: center;
+  background: var(--card-2); border: 1px solid var(--line); color: var(--text);
+  font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums;
+}
+.set-row input:focus { outline: 2px solid rgba(255,180,84,.5); outline-offset: 1px; }
+.tick {
+  width: 44px; height: 42px; flex: none; border-radius: 11px;
+  border: 1.5px solid var(--line); background: var(--card-2);
+  color: transparent; font-size: 18px; display: grid; place-items: center;
+  transition: all .15s ease;
+}
+.tick.on { background: linear-gradient(160deg, var(--good), #2fd39a); border-color: transparent; color: #06231a; }
+.tick:active { transform: scale(.9); }
+
+.addset {
+  width: 100%; margin-top: 9px; padding: 9px; border-radius: 11px;
+  background: var(--card-2); border: 1px dashed var(--line);
+  color: var(--muted); font-size: 12.5px; font-weight: 650;
+}
+
+/* superset rounds */
+.ss-round { margin-top: 11px; padding-top: 9px; border-top: 1px solid var(--line); }
+.ss-round:first-of-type { border-top: none; }
+.ss-rl { font-size: 11px; color: var(--faint); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.ss-item { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.ss-item:last-of-type { border-bottom: none; }
+.ss-name { font-size: 14px; font-weight: 650; margin-bottom: 6px; }
+.ss-in { display: flex; gap: 7px; align-items: center; }
+.ss-in input {
+  flex: 1; min-width: 0; padding: 10px 8px; border-radius: 10px; text-align: center;
+  background: var(--card-2); border: 1px solid var(--line); color: var(--text); font-size: 14px;
+}
+
+/* metcon prescription + result */
+.mv-list { margin-top: 9px; }
+.mv-line {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 6px 0; font-size: 13.5px; border-bottom: 1px solid var(--line);
+}
+.mv-line:last-child { border-bottom: none; }
+.mv-line .dim { color: var(--muted); font-size: 12.5px; }
+.res-row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 11px; }
+.res-row .field { margin-bottom: 0; }
+.res-row input {
+  text-align: center; font-size: 17px; font-weight: 700; padding: 12px 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* the number stepper in the builder */
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper button {
+  width: 46px; height: 46px; border-radius: 13px; font-size: 20px; font-weight: 700;
+  background: var(--card-2); border: 1px solid var(--line); color: var(--text);
+  display: grid; place-items: center;
+}
+.stepper button:active { transform: scale(.92); }
+.stepper b { flex: 1; text-align: center; font-size: 22px; font-weight: 800; }
+
+/* block-type chooser */
+.type-item {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%; text-align: left;
+  padding: 14px; margin-bottom: 8px; border-radius: var(--radius);
+  background: var(--card); border: 1px solid var(--line);
+}
+.type-item .ti-ic { font-size: 22px; flex: none; }
+.type-item .ti-tx b { display: block; font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+.type-item .ti-tx span { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+
+.checkrow {
+  display: flex; align-items: flex-start; gap: 11px; padding: 13px;
+  background: var(--card-2); border-radius: 13px; margin-bottom: 10px; font-size: 13.5px;
+}
+.checkrow input { width: 21px; height: 21px; flex: none; accent-color: var(--accent); }
+
 .empty { text-align: center; padding: 34px 18px; color: var(--muted); }
 .empty .big { font-size: 34px; margin-bottom: 8px; }
 .stat-row { display: flex; gap: 10px; }
