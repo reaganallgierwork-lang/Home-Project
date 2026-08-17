@@ -80,6 +80,20 @@ html, body {
   line-height: 1.45;
   overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
+  /* iOS Safari (including installed home-screen apps) only keeps a fixed
+     bottom element glued to the true edge of the screen while the page is
+     tall enough to be scrollable. A short screen — Body with just one or
+     two entries logged, versus Streaks with a full list of cards — never
+     triggers that sync, so the tab bar floats up with a gap of bare
+     background underneath it. Forcing the document to always be at least
+     one full viewport tall keeps it scrollable-in-principle on every
+     screen, so the tab bar stays pinned regardless of how little content
+     a tab has. dvh (the visual viewport, not the one padded out by
+     Safari's collapsing chrome) is what makes "one full viewport" actually
+     true here; the vh line above it is only a fallback for engines that
+     don't know dvh yet. */
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* A single cold gold wash from the top-left and a colder one bottom-right —
