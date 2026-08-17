@@ -28,6 +28,7 @@ import { sessionVolume, sessionSetCount } from './workouts.js';
 import './metrics-weight.js';          // registers the body-weight metric source
 import { renderWeight, openBodyEntrySheet, openPhotoViewer } from './weight.js';
 import { icon, PICKER_ICONS, hasIcon } from './icons.js';
+import { openSheet as modal } from './sheet.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (id) => document.getElementById(id);
@@ -1031,17 +1032,6 @@ function editHabit(id) {
 }
 
 /* ---------- a bottom sheet ---------- */
-function modal(html) {
-  const back = document.createElement('div');
-  back.className = 'modal-back';
-  back.innerHTML = `<div class="modal">${html}</div>`;
-  document.body.appendChild(back);
-  document.body.style.overflow = 'hidden';
-  const close = () => { back.remove(); document.body.style.overflow = ''; };
-  back.addEventListener('click', (e) => { if (e.target === back) close(); });
-  return close;
-}
-
 /* ============================================================================
    CELEBRATIONS
    ----------------------------------------------------------------------------

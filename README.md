@@ -35,6 +35,12 @@ To recolour the whole app, change the variables at the top of `app.css`. The
 chart mark colour is validated for contrast against the card surface — if you
 change it, re-validate rather than guessing.
 
+Every picker, form and detail view that pops up from the bottom of the
+screen can be swiped away — pull down from the very top and let go, the way
+an iOS sheet closes. Below the top it's an ordinary scroll instead, so a
+long list (the exercise library, say) never needs to be scrolled all the
+way back down just to find a Close button.
+
 ---
 
 ## Getting it on your phone
@@ -416,6 +422,7 @@ on your phone about a minute later.
 | `js/analyze.js` | The Data tab itself. |
 | `js/ids.js` | The shared id generator, kept separate so modules needn't import each other. |
 | `js/icons.js` | The line-icon set, the picker list, and the emoji-to-icon migration map. |
+| `js/sheet.js` | The shared bottom-sheet overlay — every picker, form and detail view — including swipe-to-dismiss. |
 | `app.css` | All the styling. The colours are variables at the very top. |
 | `index.html` | The page shell. |
 | `sw.js` | Makes the app work offline. |

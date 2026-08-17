@@ -26,6 +26,7 @@ import {
   fmtDuration, parseDuration, allRecords, isBodyweightLoaded,
 } from './workouts.js';
 import { icon } from './icons.js';
+import { openSheet as sheet, closeAllSheets as closeAll } from './sheet.js';
 
 const el = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1076,31 +1077,6 @@ function renderExercise(state, unit) {
 /* ============================================================================
    little helpers
    ========================================================================== */
-
-const openSheets = [];
-
-function sheet(html) {
-  const back = document.createElement('div');
-  back.className = 'modal-back';
-  back.innerHTML = `<div class="modal">${html}</div>`;
-  document.body.appendChild(back);
-  document.body.style.overflow = 'hidden';
-  openSheets.push(back);
-  const close = () => {
-    back.remove();
-    const i = openSheets.indexOf(back);
-    if (i >= 0) openSheets.splice(i, 1);
-    if (!openSheets.length) document.body.style.overflow = '';
-  };
-  back.addEventListener('click', (e) => { if (e.target === back) close(); });
-  return close;
-}
-
-/** Close every open sheet — used when one flow hands off to another. */
-function closeAll() {
-  while (openSheets.length) openSheets.pop().remove();
-  document.body.style.overflow = '';
-}
 
 function toast(title, body) {
   const box = el('toasts');

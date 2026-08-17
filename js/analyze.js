@@ -21,6 +21,7 @@ import { workoutTableColumns } from './metrics-workouts.js';
 import { bodyTableColumns } from './metrics-weight.js';
 import { renderChart } from './chart.js';
 import { icon } from './icons.js';
+import { openSheet } from './sheet.js';
 
 const el = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -230,33 +231,26 @@ function openMetricPicker(state, metrics, current) {
     g.items.push(m);
   });
 
-  const back = document.createElement('div');
-  back.className = 'modal-back';
-  back.innerHTML = `
-    <div class="modal">
-      <h3>What do you want to look at?</h3>
-      <div class="lede">Everything you track shows up here automatically.</div>
-      <input type="text" id="metricSearch" placeholder="Search…" class="search">
-      <div id="metricList">
-        ${groups.map((g) => `
-          <div class="pick-group" data-name="${esc(g.name.toLowerCase())}">
-            <div class="pick-head">${icon(g.icon || 'chartLine', 14)}${esc(g.name)}</div>
-            ${g.items.map((m) => `
-              <button class="pick-item ${m.id === current.id ? 'on' : ''}" data-id="${esc(m.id)}" data-label="${esc(m.label.toLowerCase())}">
-                <span>${esc(m.label)}</span>
-                ${m.id === current.id ? icon('check', 16) : ''}
-              </button>`).join('')}
-          </div>`).join('')}
-      </div>
-      <button class="btn ghost" id="pickCancel">Close</button>
-    </div>`;
-  document.body.appendChild(back);
-  document.body.style.overflow = 'hidden';
-  const close = () => { back.remove(); document.body.style.overflow = ''; };
-  back.addEventListener('click', (e) => { if (e.target === back) close(); });
-  back.querySelector('#pickCancel').onclick = close;
+  const close = openSheet(`
+    <h3>What do you want to look at?</h3>
+    <div class="lede">Everything you track shows up here automatically.</div>
+    <input type="text" id="metricSearch" placeholder="Search…" class="search">
+    <div id="metricList">
+      ${groups.map((g) => `
+        <div class="pick-group" data-name="${esc(g.name.toLowerCase())}">
+          <div class="pick-head">${icon(g.icon || 'chartLine', 14)}${esc(g.name)}</div>
+          ${g.items.map((m) => `
+            <button class="pick-item ${m.id === current.id ? 'on' : ''}" data-id="${esc(m.id)}" data-label="${esc(m.label.toLowerCase())}">
+              <span>${esc(m.label)}</span>
+              ${m.id === current.id ? icon('check', 16) : ''}
+            </button>`).join('')}
+        </div>`).join('')}
+    </div>
+    <button class="btn ghost" id="pickCancel">Close</button>`);
 
-  back.querySelectorAll('.pick-item').forEach((b) => {
+  el('pickCancel').onclick = close;
+
+  document.querySelectorAll('.modal .pick-item').forEach((b) => {
     b.onclick = () => {
       store.update((s) => { ui(s).metricId = b.dataset.id; ui(s).agg = null; });
       close();
@@ -264,10 +258,10 @@ function openMetricPicker(state, metrics, current) {
     };
   });
 
-  const search = back.querySelector('#metricSearch');
+  const search = el('metricSearch');
   search.oninput = () => {
     const q = search.value.trim().toLowerCase();
-    back.querySelectorAll('.pick-group').forEach((g) => {
+    document.querySelectorAll('.modal .pick-group').forEach((g) => {
       const groupHit = g.dataset.name.includes(q);
       let any = false;
       g.querySelectorAll('.pick-item').forEach((it) => {

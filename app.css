@@ -518,7 +518,7 @@ a { color: var(--gold); }
   width: 100%; max-width: 620px; background: var(--bg-2);
   border-radius: 22px 22px 0 0; border: 1px solid var(--line); border-bottom: none;
   padding: 20px var(--pad) calc(24px + env(safe-area-inset-bottom));
-  max-height: 88vh; overflow-y: auto;
+  max-height: 88vh; overflow-y: auto; overscroll-behavior: contain;
   animation: slideup .26s cubic-bezier(.2,.9,.2,1) both;
 }
 @keyframes slideup { from { transform: translateY(100%); } to { transform: none; } }

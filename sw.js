@@ -10,7 +10,7 @@
    every phone to throw away the old copy and pull the new one.
    ========================================================================== */
 
-const CACHE = 'ascent-v8';
+const CACHE = 'ascent-v9';
 
 const FILES = [
   './',
@@ -24,6 +24,7 @@ const FILES = [
   './js/config.js',
   './js/ids.js',
   './js/icons.js',
+  './js/sheet.js',
   './js/metrics.js',
   './js/metrics-habits.js',
   './js/metrics-workouts.js',

@@ -13,6 +13,7 @@
 
 import * as store from './store.js';
 import { icon } from './icons.js';
+import { openSheet as sheet, lockScroll, unlockScroll } from './sheet.js';
 
 const el = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -220,8 +221,8 @@ export function openPhotoViewer(dataUrl) {
     <button class="pv-close" aria-label="Close">${icon('close', 20)}</button>
     <img src="${dataUrl}" alt="">`;
   document.body.appendChild(back);
-  document.body.style.overflow = 'hidden';
-  const close = () => { back.remove(); document.body.style.overflow = ''; };
+  lockScroll();
+  const close = () => { back.remove(); unlockScroll(); };
   back.addEventListener('click', (e) => { if (e.target === back || e.target.closest('.pv-close')) close(); });
 }
 
@@ -274,17 +275,6 @@ async function compressPhoto(file) {
    little helpers — deliberately local rather than imported from ui.js, so
    this module has no dependency on it (see the file header).
    ========================================================================== */
-
-function sheet(html) {
-  const back = document.createElement('div');
-  back.className = 'modal-back';
-  back.innerHTML = `<div class="modal">${html}</div>`;
-  document.body.appendChild(back);
-  document.body.style.overflow = 'hidden';
-  const close = () => { back.remove(); document.body.style.overflow = ''; };
-  back.addEventListener('click', (e) => { if (e.target === back) close(); });
-  return close;
-}
 
 function toast(glyph, title, body) {
   const box = document.getElementById('toasts');
