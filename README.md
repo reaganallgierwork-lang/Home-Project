@@ -119,6 +119,39 @@ counting past it for as long as you keep logging. If your goal is 145g and
 you actually eat 210g, the app shows 210g, not a number clamped down to
 145. Real intake is worth recording even after the points are maxed.
 
+### Calorie budget — the one goal that runs backwards
+
+Every other counter rewards **more**: more water, more protein, more reps.
+A calorie budget is the opposite — the goal is to land **at or under** a
+number, so a **Calorie budget** habit (pick it from the Type dropdown when
+adding or editing a habit) scores the mirror image of everything else.
+
+Its goal isn't typed in directly. Instead you set two numbers:
+
+- **Your average TDEE** — your total daily energy expenditure, one number
+  for your whole profile. It defaults to 2600 the first time, but that's
+  only a starting point to adjust, not an estimate of anything — put in
+  your own if you know it. It stays the same every day until you come back
+  and change it, and changing it moves every calorie-budget habit at once.
+- **Desired daily deficit** — how far under your TDEE you're aiming to eat.
+
+The habit's goal is simply **TDEE − deficit**, recalculated live every time
+it's needed — so raising or lowering your TDEE later reshapes the goal (and
+every past day's score) without having to touch the habit itself.
+
+Like every other nutrition-linked counter, it's entirely fed by your food
+log — see the **Nutrition** section under the Body tab — so there's nothing
+to tap by hand, just a **Log food to fill this in** shortcut.
+
+Scoring: land at or under budget on a given day and that habit earns **full
+credit**, same as any other day it hits its goal — there's no extra reward
+for eating far less than your budget, same-target, same-score. Go over and
+credit falls off smoothly rather than dropping to zero in one step:
+10% over your budget still keeps about 90% of the credit, 50% over keeps
+about half, and it bottoms out at zero once you've eaten double your
+budget. No cliffs, same as everywhere else in the app — one bad meal costs
+you gradually, not all at once.
+
 ### Separate streaks
 
 Every habit keeps **its own** current streak and its own longest-ever streak.
@@ -228,6 +261,11 @@ Tap the **gear** in the top right of the log screen. From there you can:
   per-habit — nothing links itself automatically, so if you want your existing
   "Protein target" habit to track your actual food log instead of manual taps,
   come here and set it.
+- **Add a Calorie budget habit** — the fourth option in the Type dropdown.
+  It's a counter that runs backwards from every other one: instead of
+  rewarding more, it wants you at or under a budget computed as your TDEE
+  minus a desired deficit, both editable right there. See *Calorie budget —
+  the one goal that runs backwards*, below, for how it scores.
 - **Retire a habit** — it stops counting from today but every past day keeps the
   score it already had. This is almost always what you want instead of deleting.
 - **Change the daily pot, the escalation rate, the recovery window, and the

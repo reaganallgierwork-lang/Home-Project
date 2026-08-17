@@ -114,6 +114,15 @@ export const DEFAULTS = {
      'lb' or 'kg'. Only a label — the app never converts, it just records the
      number you type, so switch it before you start rather than partway. */
   weightUnit: 'lb',
+
+  /* ---- Nutrition ----
+     Your average total daily energy expenditure, used only by a "Calorie
+     budget" habit to turn a desired deficit into a live goal (TDEE - deficit).
+     One number for your whole profile, the same every day until you change
+     it — edited from that habit's editor. 2600 is just a starting point,
+     not a real estimate of anyone's TDEE; the whole reason it's a setting
+     and not a fixed constant is so it's the only place that number lives. */
+  tdee: 2600,
 };
 
 /* ---------------------------------------------------------------------------

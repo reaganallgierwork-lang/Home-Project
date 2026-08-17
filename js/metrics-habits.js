@@ -21,7 +21,7 @@
 
 import { registerSource, perDay } from './metrics.js';
 import { compute } from './engine.js';
-import { subscribe } from './store.js';
+import { subscribe, effectiveGoal } from './store.js';
 
 /* compute() walks your whole history, so calling it once per metric per redraw
    would be wasteful — a dozen habits means a dozen full passes. So the result
@@ -123,7 +123,7 @@ registerSource({
              totals are available from the toggle when you want them. */
           defaultAgg: 'avg',
           aggOptions: isCounter ? ['avg', 'sum', 'max', 'min'] : ['avg', 'max', 'min'],
-          target: h.threshold ?? h.max,
+          target: h.goalSource === 'tdee' ? effectiveGoal(h, state.settings) : (h.threshold ?? h.max),
           higherIsBetter: true,
           form: 'line',
           /* A night you forgot to rate isn't a zero-quality night, but a day

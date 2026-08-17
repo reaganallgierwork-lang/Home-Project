@@ -222,12 +222,13 @@ function renderToday(state) {
          jump straight to where the real editing happens. */
       const amt = row.value;
       const unitTxt = h.unit ? ` ${esc(h.unit)}` : '';
+      const goal = store.effectiveGoal(h, state.settings);
       control = `
         <div class="counter locked" data-habit="${h.id}">
           <button class="ctr-btn minus" disabled aria-hidden="true">${icon('minus', 18)}</button>
           <div class="fill">
-            <div class="lbl"><b>${amt == null ? '—' : amt}${amt == null ? '' : unitTxt}</b><span>of ${h.max}${unitTxt}</span></div>
-            <div class="bar ${row.success ? 'good' : ''}"><i style="width:${(Math.min(1, (amt || 0) / h.max) * 100).toFixed(1)}%"></i></div>
+            <div class="lbl"><b>${amt == null ? '—' : amt}${amt == null ? '' : unitTxt}</b><span>of ${goal}${unitTxt}</span></div>
+            <div class="bar ${row.success ? 'good' : ''}"><i style="width:${(Math.min(1, (amt || 0) / goal) * 100).toFixed(1)}%"></i></div>
           </div>
           <button class="ctr-btn plus" disabled aria-hidden="true">${icon('plus', 18)}</button>
         </div>
@@ -727,11 +728,11 @@ function renderHistory(state) {
 /** What a habit row is worth showing next to its name in the day-detail
     sheet — the same value a control on the Today screen would show, just
     as plain text since nothing here is editable. */
-function habitStatusText(h, row) {
+function habitStatusText(h, row, settings) {
   if (!row.logged) return 'Not logged';
   if (h.type === 'scale' && h.inputStyle === 'counter') {
     const unitTxt = h.unit ? ` ${h.unit}` : '';
-    return `${row.value || 0}${unitTxt} of ${h.max}${unitTxt}`;
+    return `${row.value || 0}${unitTxt} of ${store.effectiveGoal(h, settings)}${unitTxt}`;
   }
   if (h.type === 'scale') return `Rated ${row.value}/5`;
   return row.success ? 'Done' : 'Not done';
@@ -761,7 +762,7 @@ function openDayDetail(state, dk) {
       return `
         <div class="streak ${row.success ? 'hot' : ''}">
           <div class="emoji">${glyph(h, 18)}</div>
-          <div class="body"><div class="name">${esc(h.name)}</div><div class="sub">${esc(habitStatusText(h, row))}</div></div>
+          <div class="body"><div class="name">${esc(h.name)}</div><div class="sub">${esc(habitStatusText(h, row, state.settings))}</div></div>
           <div class="count"><b style="font-size:18px">${round(row.earned)}</b><span>pts</span></div>
         </div>`;
     }).join('');
@@ -1025,9 +1026,10 @@ function openSettings() {
 }
 
 /** Add or edit one habit. */
-/** Which of the three input kinds a habit currently is, for the editor. */
+/** Which of the four input kinds a habit currently is, for the editor. */
 function habitKind(h) {
   if (!h || h.type === 'binary') return 'binary';
+  if (h.inputStyle === 'counter' && h.goalSource === 'tdee') return 'calorieBudget';
   return h.inputStyle === 'counter' ? 'counter' : 'rating';
 }
 
@@ -1065,6 +1067,7 @@ function editHabit(id) {
         <option value="binary" ${kind === 'binary' ? 'selected' : ''}>Did it / didn't (a tick box)</option>
         <option value="rating" ${kind === 'rating' ? 'selected' : ''}>Rate it 1–5 (like sleep)</option>
         <option value="counter" ${kind === 'counter' ? 'selected' : ''}>Count up to a goal (like ounces of water)</option>
+        <option value="calorieBudget" ${kind === 'calorieBudget' ? 'selected' : ''}>Calorie budget (stay under TDEE − deficit)</option>
       </select>
     </div>
     <div class="field" id="thresholdField" style="display:${kind === 'rating' ? 'block' : 'none'}">
@@ -1110,6 +1113,25 @@ function editHabit(id) {
         <div class="help">Linking it hands the counter over to your food log — logging a meal on the Body tab's Nutrition section fills this in, and the +/− here turn off.</div>
       </div>
     </div>
+    <div id="calorieBudgetFields" style="display:${kind === 'calorieBudget' ? 'block' : 'none'}">
+      <div class="hint" style="margin-bottom:11px">
+        Fed entirely from calories logged on the Body tab's Nutrition section — there's nothing to tap by hand. Full credit any day you land at or under the budget below; going over costs credit gradually rather than all at once, the same "no cliffs" rule as everything else here.
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Your average TDEE</label>
+          <input type="number" id="hTdee" min="500" value="${state.settings.tdee}">
+          <div class="help">One number for your whole profile — changing it here moves every calorie-budget goal, not just this one.</div>
+        </div>
+        <div class="field">
+          <label>Desired daily deficit</label>
+          <input type="number" id="hDeficit" min="0" value="${h?.deficitTarget ?? 500}">
+        </div>
+      </div>
+      <div class="field">
+        <div class="help">Today's budget: <b id="hBudgetPreview">${Math.max(1, state.settings.tdee - (h?.deficitTarget ?? 500))}</b> calories.</div>
+      </div>
+    </div>
     <button class="btn primary" id="saveHabit">${h ? 'Save changes' : 'Add habit'}</button>
     ${h ? `
       <button class="btn" id="retireHabit">${h.archived ? 'Bring it back' : 'Retire it (keeps history)'}</button>
@@ -1121,7 +1143,15 @@ function editHabit(id) {
     const k = el('hType').value;
     el('thresholdField').style.display = k === 'rating' ? 'block' : 'none';
     el('counterFields').style.display = k === 'counter' ? 'block' : 'none';
+    el('calorieBudgetFields').style.display = k === 'calorieBudget' ? 'block' : 'none';
   };
+  const refreshBudgetPreview = () => {
+    const tdee = Math.max(500, +el('hTdee').value || state.settings.tdee);
+    const deficit = Math.max(0, +el('hDeficit').value || 0);
+    el('hBudgetPreview').textContent = Math.max(1, tdee - deficit);
+  };
+  el('hTdee').oninput = refreshBudgetPreview;
+  el('hDeficit').oninput = refreshBudgetPreview;
   document.querySelectorAll('#hIconGrid .icon-pick').forEach((b) => {
     b.onclick = () => {
       chosenIcon = b.dataset.icon;
@@ -1139,16 +1169,36 @@ function editHabit(id) {
       weight: Math.max(1, Math.min(40, +el('hWeight').value || 10)),
     };
     if (k === 'binary') {
-      Object.assign(patch, { type: 'binary', inputStyle: 'rating', nutritionLink: null });
+      Object.assign(patch, {
+        type: 'binary', inputStyle: 'rating', nutritionLink: null, goalSource: 'fixed',
+      });
     } else if (k === 'rating') {
       Object.assign(patch, {
-        type: 'scale', inputStyle: 'rating', max: 5, step: 1, unit: '', stepLabel: '', nutritionLink: null,
+        type: 'scale', inputStyle: 'rating', max: 5, step: 1, unit: '', stepLabel: '', nutritionLink: null, goalSource: 'fixed',
         threshold: Math.max(1, Math.min(5, +el('hThreshold').value || 3)),
+      });
+    } else if (k === 'calorieBudget') {
+      const tdee = Math.max(500, +el('hTdee').value || state.settings.tdee);
+      const deficit = Math.max(0, +el('hDeficit').value || 0);
+      const budget = Math.max(1, tdee - deficit);
+      /* TDEE is one number for your whole profile, not per-habit — saving it
+         here updates every calorie-budget habit at once via effectiveGoal(). */
+      store.update((st) => { st.settings.tdee = tdee; });
+      Object.assign(patch, {
+        type: 'scale', inputStyle: 'counter',
+        goalSource: 'tdee',
+        deficitTarget: deficit,
+        max: budget,
+        threshold: budget,
+        step: 1,
+        unit: 'cal',
+        stepLabel: '',
+        nutritionLink: 'calories',
       });
     } else {
       const goal = Math.max(1, +el('hGoal').value || 150);
       Object.assign(patch, {
-        type: 'scale', inputStyle: 'counter',
+        type: 'scale', inputStyle: 'counter', goalSource: 'fixed',
         max: goal,
         step: Math.max(0.1, +el('hStep').value || 1),
         unit: el('hUnit').value.trim(),

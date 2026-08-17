@@ -148,6 +148,19 @@ function freshState() {
     from any one of them — see syncNutritionLinks() below. */
 export const NUTRIENT_FIELDS = ['calories', 'protein', 'carbs', 'fat'];
 
+/** The live goal for a scale (rating/counter) habit. Almost always just its
+    stored max — but a Calorie budget habit (goalSource:'tdee') computes its
+    goal fresh from your TDEE setting minus its own deficit every time,
+    instead of trusting a number cached on the habit at save time. That way
+    changing your TDEE in one habit's editor moves every calorie-budget
+    goal at once, today and retroactively, with nothing to fall out of sync. */
+export function effectiveGoal(h, settings) {
+  if (h.goalSource === 'tdee') {
+    return Math.max(1, (settings?.tdee ?? DEFAULTS.tdee) - (h.deficitTarget ?? 0));
+  }
+  return h.max;
+}
+
 /* ---------------------------------------------------------------- safety --
 
    Everything below treats a loaded save file as UNTRUSTED. Your own data is
@@ -280,6 +293,11 @@ function normalise(raw) {
        Nutrition section. Anything else collapses to "not linked" rather
        than being trusted as a fourth, unlisted nutrient. */
     nutritionLink: NUTRIENT_FIELDS.includes(h.nutritionLink) ? h.nutritionLink : null,
+    /* 'tdee' marks a Calorie budget habit — see effectiveGoal() below. Its
+       goal is computed live from settings.tdee and never trusted from a
+       stored max, so a hand-edited backup can't plant a fake budget. */
+    goalSource: h.goalSource === 'tdee' ? 'tdee' : 'fixed',
+    deficitTarget: Math.max(0, nOr(h.deficitTarget, 500)),
     weight: Math.max(1, nOr(h.weight, 10)),
     max: Math.max(1, nOr(h.max, 5)),
     step: Math.max(0.01, nOr(h.step, 1)),
@@ -322,6 +340,7 @@ function normalise(raw) {
   /* Percentages must be ascending for the ladder to make sense. */
   s.settings.tierPercents = (s.settings.tierPercents || DEFAULTS.tierPercents)
     .map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  s.settings.tdee = Math.max(500, nOr(s.settings.tdee, DEFAULTS.tdee));
 
   /* ---- one-time migration: emoji habits become line icons ----
      Habits saved before the visual overhaul carry an emoji. Map the ones we
@@ -436,6 +455,8 @@ export function addHabit(partial) {
     stepLabel: partial.stepLabel || '',
     inputStyle: partial.inputStyle === 'counter' ? 'counter' : 'rating',
     nutritionLink: NUTRIENT_FIELDS.includes(partial.nutritionLink) ? partial.nutritionLink : null,
+    goalSource: partial.goalSource === 'tdee' ? 'tdee' : 'fixed',
+    deficitTarget: Number.isFinite(+partial.deficitTarget) ? Math.max(0, +partial.deficitTarget) : 500,
     archived: false,
     archivedAt: null,
     /* Starts counting from today. A habit you add on the 20th can never give

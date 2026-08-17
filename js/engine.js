@@ -18,7 +18,7 @@
    ========================================================================== */
 
 import {
-  todayKey, addDays, monthOf, daysInMonth, rangeDays, parseKey,
+  todayKey, addDays, monthOf, daysInMonth, rangeDays, parseKey, effectiveGoal,
 } from './store.js';
 import { TIERS, META_BADGES, COMEBACK_BADGE } from './config.js';
 
@@ -31,17 +31,33 @@ function isActive(habit, day) {
   return true;
 }
 
-/** How much of this habit's points a logged value earns: 0 to 1. */
-function fractionOf(habit, value) {
+/** How much of this habit's points a logged value earns: 0 to 1.
+    A Calorie budget habit (goalSource:'tdee') is the one flavour of scale
+    habit that isn't "more is better" — the goal is to land AT OR UNDER your
+    budget, so credit peaks at the goal instead of growing past it: full
+    credit anywhere at or under budget, then falling off smoothly as you go
+    over, reaching zero once you've doubled it. Symmetric with how every
+    other counter never punishes going past its goal — this one just has the
+    opposite goal, staying under rather than reaching up to. */
+function fractionOf(habit, value, settings) {
   if (value === undefined || value === null) return 0;
-  if (habit.type === 'scale') return Math.max(0, Math.min(1, value / habit.max));
+  if (habit.type === 'scale') {
+    const goal = effectiveGoal(habit, settings);
+    if (habit.goalSource === 'tdee') {
+      return Math.max(0, Math.min(1, 1 - Math.max(0, value - goal) / goal));
+    }
+    return Math.max(0, Math.min(1, value / goal));
+  }
   return value ? 1 : 0;
 }
 
 /** Did this count as a "good day" for streak purposes? */
-function isSuccess(habit, value) {
+function isSuccess(habit, value, settings) {
   if (value === undefined || value === null) return false;
-  if (habit.type === 'scale') return value >= habit.threshold;
+  if (habit.type === 'scale') {
+    if (habit.goalSource === 'tdee') return value <= effectiveGoal(habit, settings);
+    return value >= habit.threshold;
+  }
   return !!value;
 }
 
@@ -114,8 +130,8 @@ export function compute(state, endDay = todayKey()) {
     active.forEach((h) => {
       const r = run[h.id];
       const value = entries[h.id];
-      const frac = fractionOf(h, value);
-      const success = isSuccess(h, value);
+      const frac = fractionOf(h, value, S);
+      const success = isSuccess(h, value, S);
 
       const available = sumEff > 0 ? (potToday * eff[h.id]) / sumEff : 0;
       const baseline = sumBase > 0 ? (potToday * h.weight) / sumBase : 0;
