@@ -140,6 +140,10 @@ Two different things happen depending on how long you were off:
 They never both fire. Short slip, quick recovery, get the points back. Long
 lapse, restarting is what's worth more.
 
+Tiers and badges live together on one tab (**Ranks** in the tab bar) since
+they're both answering the same question — where do I stand — just at
+different timescales: tiers reset every month, badges are what you keep.
+
 ### Monthly tiers
 
 Points accumulate through the month toward five tiers. Each threshold is a
@@ -260,6 +264,44 @@ estimate.
 
 ---
 
+## The Body tab
+
+Weight, tracked over time, with an optional photo for any day you take one.
+
+**Log today's weigh-in** opens a short sheet: a date (defaults to today, but
+you can backfill any past day), a weight in whatever unit you last used
+(toggle **LB / KG** right there — it only changes the label, the app never
+converts a number you already typed), and an optional photo.
+
+A day can carry a weight, a photo, or both — a photo-only day is a legitimate
+entry, useful if you want a visual record without stepping on the scale that
+moment. Tap a photo to view it full-screen; tap the **✕** on it to remove just
+the photo without touching the weight.
+
+**Photos never leave your phone.** They're compressed client-side before
+they're saved — resized and re-encoded as a JPEG, backing off through smaller
+passes automatically until the file is a size that will actually fit in your
+phone's storage budget. If a photo genuinely won't fit even at the smallest
+pass, the weight still saves and you get a plain toast saying so — the app
+never silently drops data or pretends a save worked when it didn't.
+
+### On the calendar
+
+Every day you've weighed in gets a small gold dot on the **History** tab's
+calendar; a dot with a halo means that day also has a photo. Tap any day to
+see its score and its weight entry together, with a one-tap **Log weight for
+this day** if there isn't one yet, or **Edit this entry** if there is.
+
+### On the Data tab
+
+Weight shows up as its own metric — see below — so you can chart it the same
+way as everything else: any window from 7 days to all time, averaged, or by
+its min/max over a bucket. A day you didn't weigh in is left out of the
+average rather than counted as a 0, the same honesty rule the Data tab uses
+for sleep ratings.
+
+---
+
 ## The Data tab
 
 Everything you log is kept as raw numbers, and this tab is where you dig
@@ -280,6 +322,9 @@ Every exercise you've actually trained gets its own group too — **heaviest set
 metrics (total volume, sets performed, days trained) and any named metcon's
 time or rounds. That's the long game: pick "Bench Press → Estimated 1RM", set
 the range to **All time**, and watch it climb over the years.
+
+Your body weight log gets a group too, right alongside habits and lifts — same
+chart, same date-range picker, same table columns.
 
 Choose a window (7 days to all time), and the chart buckets it sensibly — by
 day for short windows, by week or month for long ones, and you can override
@@ -340,8 +385,10 @@ on your phone about a minute later.
 | `js/metrics.js` | The generic data layer behind the Data tab. **Read the comment at the top before adding a new kind of tracked data.** |
 | `js/metrics-habits.js` | Exposes habits to the Data tab. |
 | `js/metrics-workouts.js` | Exposes training to the Data tab. |
+| `js/metrics-weight.js` | Exposes body weight to the Data tab. |
 | `js/workouts.js` | The workout data model and maths — blocks, set records, 1RM, personal bests. No screen code. |
 | `js/train.js` | The Train tab: builder, logger, exercise library. |
+| `js/weight.js` | The Body tab: weigh-ins, optional photos, photo compression. Also opened from the History calendar. |
 | `js/chart.js` | The reusable chart. Knows nothing about habits or lifts. |
 | `js/analyze.js` | The Data tab itself. |
 | `js/ids.js` | The shared id generator, kept separate so modules needn't import each other. |
@@ -383,7 +430,7 @@ node engine.test.mjs      # 56 checks — scoring, streaks, tiers, the guardrail
 node migration.test.mjs   # 11 checks — the hydration counter migration
 node metrics.test.mjs     # 44 checks — bucketing, aggregation, trends
 node workouts.test.mjs    # 49 checks — blocks, set records, 1RM, templates
+node weight.test.mjs      # 38 checks — weigh-ins, photo storage, the quota fallback
 ```
 
-Needs Node.js installed. All 160 should pass. The visual overhaul changed no
-scoring or workout logic, so all 160 pass unchanged.
+Needs Node.js installed. All 208 should pass.

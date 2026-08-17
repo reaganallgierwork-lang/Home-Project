@@ -376,7 +376,8 @@ export function formatValue(metric, value, { compact = false } = {}) {
 /** The earliest day any registered metric has data for — drives 'All time'. */
 export function earliestDay(state) {
   const logDays = Object.keys(state.log || {}).sort();
+  const bodyDays = Object.keys(state.bodyLog || {}).sort();
   const created = (state.habits || []).map((h) => h.createdAt).filter(Boolean).sort();
-  const candidates = [logDays[0], created[0]].filter(Boolean).sort();
+  const candidates = [logDays[0], bodyDays[0], created[0]].filter(Boolean).sort();
   return candidates[0] || todayKey();
 }

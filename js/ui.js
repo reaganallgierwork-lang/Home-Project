@@ -24,6 +24,8 @@ import './metrics-habits.js';          // registers the habits metric source
 import './metrics-workouts.js';        // registers the training metric source
 import { renderAnalyze } from './analyze.js';
 import { renderTrain } from './train.js';
+import './metrics-weight.js';          // registers the body-weight metric source
+import { renderWeight, openBodyEntrySheet, openPhotoViewer } from './weight.js';
 import { icon, PICKER_ICONS, hasIcon } from './icons.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -46,13 +48,19 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
    BOOT
    ========================================================================== */
 
-/* The tab bar and the screens, in order. Add to this list to add a tab. */
+/* The tab bar and the screens, in order. Add to this list to add a tab.
+   Tiers and Badges share one tab (renderProgress) — they're both "where do I
+   stand this month," and folding them together made room for Body without
+   growing the bar past seven. */
 const SCREENS = [
   { id: 'today', label: 'Log', icon: 'logMark', render: (s) => renderToday(s) },
   { id: 'train', label: 'Train', icon: 'dumbbell', render: (s) => renderTrain(s) },
   { id: 'streaks', label: 'Streaks', icon: 'flame', render: (s) => renderStreaks(s) },
-  { id: 'tiers', label: 'Tiers', icon: 'steps', render: (s) => renderTiers(s) },
-  { id: 'badges', label: 'Badges', icon: 'shield', render: (s) => renderBadges(s) },
+  { id: 'body', label: 'Body', icon: 'bodyweight', render: (s) => renderWeight(s) },
+  /* Tab label is short on purpose — "Progress" is what the screen itself is
+     titled, but at 8 characters it was the one label that clipped in a
+     7-wide bar (everything else tops out at 7, like "Streaks"/"History"). */
+  { id: 'progress', label: 'Ranks', icon: 'shield', render: (s) => renderProgress(s) },
   { id: 'history', label: 'History', icon: 'chartLine', render: (s) => renderHistory(s) },
   { id: 'analyze', label: 'Data', icon: 'analyze', render: (s) => renderAnalyze(s, refresh) },
 ];
@@ -84,15 +92,19 @@ function buildShell() {
     </button>`).join('');
 }
 
+/** Switch tabs programmatically — the click handler below is one caller,
+    the History calendar's "log weight for this day" jump is the other. */
+function goToTab(id) {
+  current = id;
+  document.querySelectorAll('.tabbar button').forEach((x) => x.classList.toggle('active', x.dataset.tab === id));
+  document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === `screen-${id}`));
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  refresh();
+}
+
 function bindTabs() {
   document.querySelectorAll('.tabbar button').forEach((b) => {
-    b.addEventListener('click', () => {
-      current = b.dataset.tab;
-      document.querySelectorAll('.tabbar button').forEach((x) => x.classList.toggle('active', x === b));
-      document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === `screen-${current}`));
-      window.scrollTo({ top: 0, behavior: 'instant' });
-      refresh();
-    });
+    b.addEventListener('click', () => goToTab(b.dataset.tab));
   });
 }
 
@@ -381,12 +393,13 @@ function renderStreaks(state) {
 }
 
 /* ============================================================================
-   SCREEN 3 — TIERS. The month's roadmap.
+   SCREEN 3 — PROGRESS. The month's tier roadmap, and the badge collection
+   beneath it — combined into one tab since both answer "where do I stand."
    ========================================================================== */
 
-function renderTiers(state) {
+function renderProgress(state) {
   const m = R.months[viewMonth] || R.month;
-  if (!m) { el('screen-tiers').innerHTML = '<div class="empty">No data yet.</div>'; return; }
+  if (!m) { el('screen-progress').innerHTML = '<div class="empty">No data yet.</div>'; return; }
 
   const rows = m.tiers.map((t) => {
     const cls = t.reached ? 'reached' : (m.next && m.next.index === t.index ? 'next' : (t.locked ? 'locked' : ''));
@@ -431,9 +444,23 @@ function renderTiers(state) {
 
   const daysLeft = m.isCurrent ? m.days.filter((d) => d > R.endDay).length : 0;
 
-  el('screen-tiers').innerHTML = `
+  /* ---- badges section: was its own screen, now the second half of this one ---- */
+  const earned = R.badges.earned.slice().sort((a, b) => (b.rank - a.rank) || (b.month > a.month ? 1 : -1));
+  const permanent = earned.filter((b) => !b.provisional);
+  const inPlay = earned.filter((b) => b.provisional);
+
+  const cell = (b) => `
+    <div class="badge-cell ${b.kind === 'meta' ? 'meta' : ''} ${b.provisional ? 'prov' : ''}">
+      ${renderBadge(b.art, 74)}
+      <div class="bname">${esc(b.name)}</div>
+      <div class="bwhen">${esc(store.monthLabel(b.month, { month: 'short', year: '2-digit' }))}${b.provisional ? ' · in play' : ''}</div>
+    </div>`;
+
+  const top = permanent[0] || inPlay[0];
+
+  el('screen-progress').innerHTML = `
     <div class="topbar">
-      <h1>${esc(store.monthLabel(m.key))}<div class="sub">${round(m.total)} of ${round(m.maxPossible)} possible${m.isCurrent ? ` · ${daysLeft} days left` : ''}</div></h1>
+      <h1>Progress<div class="sub">${esc(store.monthLabel(m.key))} · ${round(m.total)} of ${round(m.maxPossible)} possible${m.isCurrent ? ` · ${daysLeft} days left` : ''}</div></h1>
       <button class="icon-btn" id="tierPrev" aria-label="Previous month">${icon('chevronLeft', 18)}</button>
       <button class="icon-btn" id="tierNext" aria-label="Next month">${icon('chevronRight', 18)}</button>
     </div>
@@ -449,10 +476,33 @@ function renderTiers(state) {
     <div class="section-title">The ladder</div>
     ${rows}
     ${metaStrip()}
-  `;
 
-  el('tierPrev').onclick = () => { viewMonth = prevKey(viewMonth); ensureMonth(); renderTiers(store.get()); };
-  el('tierNext').onclick = () => { viewMonth = nextKey(viewMonth); ensureMonth(); renderTiers(store.get()); };
+    <div class="section-title">Badge collection</div>
+    <div class="hint" style="margin:-4px 0 12px">${permanent.length} earned for good${inPlay.length ? ` · ${inPlay.length} still in play` : ''}</div>
+    ${top ? `
+      <div class="card badge-hero">
+        ${renderBadge(top.art, 96)}
+        <div class="txt">
+          <h2>${esc(top.name)}</h2>
+          <div class="hint">${esc(top.blurb)}</div>
+          <div class="hint" style="margin-top:6px;color:var(--faint)">${esc(store.monthLabel(top.month))}</div>
+        </div>
+      </div>` : ''}
+
+    ${inPlay.length ? `<div class="section-title">This month, still in play</div><div class="badge-grid">${inPlay.map(cell).join('')}</div>` : ''}
+    ${permanent.length ? `<div class="section-title">Kept forever</div><div class="badge-grid">${permanent.map(cell).join('')}</div>`
+      : `<div class="empty"><div class="big">${icon('shield', 34)}</div>No badges banked yet. Finish a month above the first tier and it lands here permanently.</div>`}
+
+    <div class="section-title">Still to find</div>
+    <div class="badge-grid">
+      ${TIERS.filter((t) => !earned.some((b) => b.name === t.name)).map((t) => `
+        <div class="badge-cell">${renderBadge(t.art, 74, true)}<div class="bname">${esc(t.name)}</div><div class="bwhen">Monthly tier</div></div>`).join('')}
+      ${META_BADGES.filter((t) => !earned.some((b) => b.name === t.name)).map((t) => `
+        <div class="badge-cell">${renderBadge(t.art, 74, true)}<div class="bname">${esc(t.name)}</div><div class="bwhen">${t.months} months running</div></div>`).join('')}
+    </div>`;
+
+  el('tierPrev').onclick = () => { viewMonth = prevKey(viewMonth); ensureMonth(); renderProgress(store.get()); };
+  el('tierNext').onclick = () => { viewMonth = nextKey(viewMonth); ensureMonth(); renderProgress(store.get()); };
 }
 
 function prevKey(k) { const [y, m] = k.split('-').map(Number); const d = new Date(y, m - 2, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
@@ -494,50 +544,7 @@ function metaStrip() {
 }
 
 /* ============================================================================
-   SCREEN 4 — BADGES. The permanent collection.
-   ========================================================================== */
-
-function renderBadges(state) {
-  const earned = R.badges.earned.slice().sort((a, b) => (b.rank - a.rank) || (b.month > a.month ? 1 : -1));
-  const permanent = earned.filter((b) => !b.provisional);
-  const inPlay = earned.filter((b) => b.provisional);
-
-  const cell = (b) => `
-    <div class="badge-cell ${b.kind === 'meta' ? 'meta' : ''} ${b.provisional ? 'prov' : ''}">
-      ${renderBadge(b.art, 74)}
-      <div class="bname">${esc(b.name)}</div>
-      <div class="bwhen">${esc(store.monthLabel(b.month, { month: 'short', year: '2-digit' }))}${b.provisional ? ' · in play' : ''}</div>
-    </div>`;
-
-  const top = permanent[0] || inPlay[0];
-
-  el('screen-badges').innerHTML = `
-    <div class="topbar"><h1>Collection<div class="sub">${permanent.length} earned for good${inPlay.length ? ` · ${inPlay.length} still in play` : ''}</div></h1></div>
-    ${top ? `
-      <div class="card badge-hero">
-        ${renderBadge(top.art, 96)}
-        <div class="txt">
-          <h2>${esc(top.name)}</h2>
-          <div class="hint">${esc(top.blurb)}</div>
-          <div class="hint" style="margin-top:6px;color:var(--faint)">${esc(store.monthLabel(top.month))}</div>
-        </div>
-      </div>` : ''}
-
-    ${inPlay.length ? `<div class="section-title">This month, still in play</div><div class="badge-grid">${inPlay.map(cell).join('')}</div>` : ''}
-    ${permanent.length ? `<div class="section-title">Kept forever</div><div class="badge-grid">${permanent.map(cell).join('')}</div>`
-      : `<div class="empty"><div class="big">${icon('shield', 34)}</div>No badges banked yet. Finish a month above the first tier and it lands here permanently.</div>`}
-
-    <div class="section-title">Still to find</div>
-    <div class="badge-grid">
-      ${TIERS.filter((t) => !earned.some((b) => b.name === t.name)).map((t) => `
-        <div class="badge-cell">${renderBadge(t.art, 74, true)}<div class="bname">${esc(t.name)}</div><div class="bwhen">Monthly tier</div></div>`).join('')}
-      ${META_BADGES.filter((t) => !earned.some((b) => b.name === t.name)).map((t) => `
-        <div class="badge-cell">${renderBadge(t.art, 74, true)}<div class="bname">${esc(t.name)}</div><div class="bwhen">${t.months} months running</div></div>`).join('')}
-    </div>`;
-}
-
-/* ============================================================================
-   SCREEN 5 — HISTORY. Weekly bars and a month calendar.
+   SCREEN 4 — HISTORY. Weekly bars and a month calendar.
    ========================================================================== */
 
 function renderHistory(state) {
@@ -560,11 +567,17 @@ function renderHistory(state) {
       const r = R.byDay[dk];
       const pct = r && r.pot ? r.earned / r.pot : 0;
       const future = dk > R.endDay;
+      /* Gold, not the pre-rebrand mint — this was the one spot the visual
+         overhaul missed, since the colour lived in an inline style rather
+         than a CSS variable. */
       const bg = r && r.anyLogged
-        ? `background:rgba(92,255,192,${(0.12 + pct * 0.55).toFixed(2)})`
+        ? `background:rgba(212,175,55,${(0.10 + pct * 0.45).toFixed(2)})`
         : '';
-      return `<div class="cell ${r?.anyLogged ? 'has' : ''} ${dk === R.endDay ? 'today' : ''} ${future ? 'future' : ''}" style="${bg}"
-                title="${store.dayLabel(dk)} — ${round(r?.total || 0)} pts">${+dk.slice(8)}</div>`;
+      const bw = state.bodyLog?.[dk];
+      const dot = bw ? `<span class="wdot ${bw.photo ? 'haspic' : ''}"></span>` : '';
+      return `<div class="cell dayclick ${r?.anyLogged ? 'has' : ''} ${dk === R.endDay ? 'today' : ''} ${future ? 'future' : ''}" style="${bg}"
+                data-day="${dk}"
+                title="${store.dayLabel(dk)} — ${round(r?.total || 0)} pts${bw ? ' · weight logged' : ''}">${+dk.slice(8)}${dot}</div>`;
     }),
   ].join('');
 
@@ -600,13 +613,56 @@ function renderHistory(state) {
         ${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d) => `<div class="dow">${d}</div>`).join('')}
         ${cells}
       </div>
-      <div class="hint" style="margin-top:11px">Greener means a bigger share of that day's points. Tap into any day from the log screen to fill it in.</div>
+      <div class="hint" style="margin-top:11px">Brighter gold means a bigger share of that day's points. A dot marks a day you logged your weight — a halo means a photo too. Tap any day to see it.</div>
     </div>
     <div class="section-title">Month by month</div>
     ${monthList}`;
 
   el('calPrev').onclick = () => { viewMonth = prevKey(viewMonth); ensureMonth(); renderHistory(store.get()); };
   el('calNext').onclick = () => { viewMonth = nextKey(viewMonth); ensureMonth(); renderHistory(store.get()); };
+  document.querySelectorAll('#screen-history .cal .cell[data-day]').forEach((c) => {
+    c.onclick = () => openDayDetail(store.get(), c.dataset.day);
+  });
+}
+
+/** A day tapped on the History calendar: that day's score, and its weight
+    entry if there is one — with a one-tap jump into logging it if not. */
+function openDayDetail(state, dk) {
+  const r = R.byDay[dk];
+  const entry = state.bodyLog?.[dk] || null;
+  const isFuture = dk > R.endDay;
+  const unit = state.settings.weightUnit || 'lb';
+
+  const habitBit = r && r.rows.length
+    ? `<div class="hint" style="margin-bottom:14px">${round(r.total)} of ${round(r.pot)} points that day${r.complete ? ' — a clean sweep.' : ''}</div>`
+    : (isFuture ? '' : '<div class="hint" style="margin-bottom:14px">No habits logged this day.</div>');
+
+  const weightBit = entry ? `
+    <div class="day-weight">
+      ${entry.photo ? `<img class="wthumb" src="${entry.photo}" alt="" id="dayPhotoThumb" style="cursor:pointer">` : `<div class="wthumb placeholder">${icon('bodyweight', 20)}</div>`}
+      <div>
+        <div class="dw-num">${entry.weight != null ? `${entry.weight} ${esc(unit)}` : 'Photo only'}</div>
+        <div class="dw-sub">${entry.photo ? 'Tap the photo to view it full size' : 'No photo attached'}</div>
+      </div>
+    </div>
+    <button class="btn" id="dayEditWeight" style="margin-top:12px">Edit this entry</button>`
+    : (isFuture ? '' : `<button class="btn primary" id="dayLogWeight">${icon('bodyweight', 17)} Log weight for this day</button>`);
+
+  const close = modal(`
+    <h3>${esc(store.dayLabel(dk, { weekday: 'long', month: 'long', day: 'numeric' }))}</h3>
+    ${habitBit}
+    ${weightBit}
+    <button class="btn ghost" id="dayClose" style="margin-top:14px">Close</button>`);
+
+  if (entry?.photo) el('dayPhotoThumb').onclick = () => openPhotoViewer(entry.photo);
+  const jumpToEntry = () => {
+    close();
+    goToTab('body');
+    openBodyEntrySheet(store.get(), dk, () => refresh());
+  };
+  if (entry) el('dayEditWeight').onclick = jumpToEntry;
+  else if (el('dayLogWeight')) el('dayLogWeight').onclick = jumpToEntry;
+  el('dayClose').onclick = close;
 }
 
 /* ============================================================================

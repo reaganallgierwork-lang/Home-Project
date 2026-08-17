@@ -117,6 +117,13 @@ function freshState() {
     exercises: buildDefaultExercises(),
     templates: [],
     sessions: [],
+
+    /* bodyLog['2026-08-16'] = { weight: 184.2, photo: 'data:image/jpeg...'|null }
+       One entry per day. Weight is in whatever settings.weightUnit says —
+       same rule as the Train tab: the app records the number you type and
+       never converts it, so switch the unit before you start rather than
+       partway through. */
+    bodyLog: {},
   };
 }
 
@@ -140,7 +147,23 @@ function normalise(raw) {
     exercises: Array.isArray(raw.exercises) && raw.exercises.length ? raw.exercises : base.exercises,
     templates: Array.isArray(raw.templates) ? raw.templates : [],
     sessions: Array.isArray(raw.sessions) ? raw.sessions : [],
+
+    bodyLog: raw.bodyLog && typeof raw.bodyLog === 'object' ? raw.bodyLog : {},
   };
+
+  /* Sanitise every entry rather than trusting the file — a hand-edited or
+     corrupted backup should degrade gracefully, never crash the app.
+     Check null/undefined BEFORE coercing with +e.weight: +null === 0, so
+     Number.isFinite(+e.weight) alone would turn an absent weight into a
+     fabricated 0 instead of leaving it unset. */
+  Object.keys(s.bodyLog).forEach((day) => {
+    const e = s.bodyLog[day] || {};
+    const weight = (e.weight === null || e.weight === undefined) ? null
+      : (Number.isFinite(+e.weight) ? +e.weight : null);
+    const photo = typeof e.photo === 'string' && e.photo.startsWith('data:image/') ? e.photo : null;
+    if (weight === null && !photo) delete s.bodyLog[day];
+    else s.bodyLog[day] = { weight, photo };
+  });
 
   s.exercises = s.exercises.map((e) => ({
     id: e.id || newId(),
@@ -249,13 +272,20 @@ export function get() {
   return state || load();
 }
 
+/** Returns true if the write actually reached localStorage. */
 export function save() {
+  let ok = true;
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
   } catch (err) {
     console.warn('Could not save — storage may be full or blocked.', err);
+    ok = false;
   }
+  /* The in-memory state changed either way — a failed persist still means
+     anything reading `state` (not localStorage) should treat it as current,
+     and derived caches (metrics) still need to invalidate. */
   listeners.forEach((fn) => fn(state));
+  return ok;
 }
 
 export function subscribe(fn) {
@@ -263,10 +293,10 @@ export function subscribe(fn) {
   return () => listeners.delete(fn);
 }
 
-/** Change state and persist in one step. */
+/** Change state and persist in one step. Returns save()'s success flag. */
 export function update(mutator) {
   mutator(get());
-  save();
+  return save();
 }
 
 /* ---------- logging a day ---------- */
@@ -414,6 +444,58 @@ export function deleteSession(id) {
 
 export function getSession(id) {
   return get().sessions.find((s) => s.id === id) || null;
+}
+
+/* ---------- body weight + progress photos ---------- */
+
+export function getBodyEntry(day) {
+  return get().bodyLog[day] || null;
+}
+
+/**
+ * Log or update a day's weight and/or photo.
+ *   patch.weight  a number, or null to clear the weight
+ *   patch.photo   a data URL to set it, null to remove it, or omit the key
+ *                 entirely to leave whatever photo is already there alone
+ * An entry with neither a weight nor a photo is removed rather than kept
+ * as an empty husk.
+ *
+ * If the photo won't fit in storage, the weight still saves and the photo
+ * falls back to whatever it was before this call (not necessarily blank —
+ * a failed "replace this photo" attempt should not destroy a perfectly good
+ * existing one). Returns { ok, photoDropped } so the caller can say so
+ * honestly rather than pretending the photo saved when it didn't.
+ */
+export function setBodyEntry(day, patch) {
+  const prevPhoto = get().bodyLog[day]?.photo ?? null;
+  let ok = update((s) => {
+    if (!s.bodyLog) s.bodyLog = {};
+    const cur = s.bodyLog[day] || { weight: null, photo: null };
+    const next = { ...cur };
+    /* Check null/undefined explicitly before coercing: +null === 0, so
+       Number.isFinite(+patch.weight) alone would turn "clear the weight"
+       into "set it to zero" — the same trap setEntry() above avoids. */
+    if ('weight' in patch) {
+      next.weight = (patch.weight === null || patch.weight === undefined) ? null
+        : (Number.isFinite(+patch.weight) ? +patch.weight : null);
+    }
+    if ('photo' in patch) next.photo = patch.photo || null;
+    if (next.weight === null && !next.photo) delete s.bodyLog[day];
+    else s.bodyLog[day] = next;
+  });
+
+  let photoDropped = false;
+  if (!ok && 'photo' in patch && patch.photo) {
+    photoDropped = true;
+    ok = update((s) => {
+      if (s.bodyLog[day]) s.bodyLog[day].photo = prevPhoto;
+    });
+  }
+  return { ok, photoDropped };
+}
+
+export function deleteBodyEntry(day) {
+  update((s) => { delete s.bodyLog[day]; });
 }
 
 /* ---------- backup ---------- */

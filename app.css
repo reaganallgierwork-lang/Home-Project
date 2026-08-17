@@ -877,6 +877,72 @@ a { color: var(--gold); }
 .weight-row .tools button { color: var(--steel); }
 .weight-row input[type=range] { accent-color: var(--gold); }
 
+/* ============================================================================
+   BODY TAB — weight entries and progress photos
+   ========================================================================== */
+
+.weightin { display: flex; gap: 8px; align-items: center; }
+.weightin input { flex: 1; min-width: 0; }
+.weightin .seg { flex: none; }
+.weightin .seg button { padding: 9px 10px; }
+
+/* the tappable photo slot in the entry sheet */
+.photo-tile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 7px; height: 140px; border-radius: var(--radius);
+  background: var(--card-2); border: 1.5px dashed var(--line-2);
+  color: var(--faint); font-size: 12px; font-weight: 650;
+  text-transform: uppercase; letter-spacing: .08em; cursor: pointer;
+  position: relative; overflow: hidden;
+}
+.photo-tile:active { transform: scale(.99); }
+.photo-tile.has-photo { border-style: solid; border-color: var(--line); padding: 0; cursor: default; }
+.photo-tile.has-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-remove, .photo-expand {
+  position: absolute; top: 8px; width: 30px; height: 30px; border-radius: 9px;
+  background: rgba(11,13,17,.72); backdrop-filter: blur(6px);
+  color: #fff; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.14);
+}
+.photo-remove { right: 8px; }
+.photo-expand { left: 8px; }
+
+/* thumbnails in the entries list and the day-detail sheet */
+.wthumb {
+  width: 44px; height: 44px; border-radius: 10px; flex: none;
+  object-fit: cover; background: var(--card-2); border: 1px solid var(--line);
+}
+.wthumb.placeholder { display: grid; place-items: center; color: var(--steel); }
+
+/* full-screen photo viewer */
+.photo-viewer {
+  position: fixed; inset: 0; z-index: 90; background: rgba(4,5,8,.94);
+  display: grid; place-items: center; padding: 24px; animation: fade .18s ease both;
+}
+.photo-viewer img {
+  max-width: 100%; max-height: 100%; border-radius: var(--radius-lg);
+  box-shadow: var(--shadow); object-fit: contain;
+}
+.pv-close {
+  position: absolute; top: calc(env(safe-area-inset-top) + 14px); right: 16px;
+  width: 42px; height: 42px; border-radius: 12px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+  color: #fff; display: grid; place-items: center;
+}
+
+/* the weight/photo dot on a History calendar day */
+.cal .cell.dayclick { cursor: pointer; }
+.cal .cell .wdot {
+  position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+  width: 5px; height: 5px; border-radius: 50%; background: var(--gold);
+}
+.cal .cell .wdot.haspic { box-shadow: 0 0 0 2.5px rgba(212,175,55,.32); }
+
+/* the day-detail sheet's weight readout */
+.day-weight { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+.day-weight .wthumb { width: 56px; height: 56px; }
+.day-weight .dw-num { font-size: 18px; font-weight: 650; }
+.day-weight .dw-sub { font-size: 11.5px; color: var(--faint); margin-top: 2px; }
+
 /* ---- badge cells ---------------------------------------------------------- */
 .badge-cell { background: linear-gradient(180deg, rgba(255,255,255,.02), transparent), var(--card); }
 .badge-cell .bname { font-size: 11px; font-weight: 700; margin-top: 9px; text-transform: uppercase; letter-spacing: .07em; }

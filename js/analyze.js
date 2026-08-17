@@ -18,6 +18,7 @@ import {
 } from './metrics.js';
 import { habitTableColumns } from './metrics-habits.js';
 import { workoutTableColumns } from './metrics-workouts.js';
+import { bodyTableColumns } from './metrics-weight.js';
 import { renderChart } from './chart.js';
 import { icon } from './icons.js';
 
@@ -286,7 +287,7 @@ function openMetricPicker(state, metrics, current) {
 function renderTable(state, u) {
   /* Columns come from each area rather than being listed here, so a new
      tracker adds its own without this screen changing. */
-  const cols = [...habitTableColumns(state), ...workoutTableColumns(state)];
+  const cols = [...habitTableColumns(state), ...workoutTableColumns(state), ...bodyTableColumns(state)];
   const earliest = earliestDay(state);
   const range = resolveRange(u.tableRange, earliest);
   const days = store.rangeDays(range.from, range.to);
