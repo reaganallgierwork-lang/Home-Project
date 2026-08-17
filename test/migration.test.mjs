@@ -72,5 +72,42 @@ console.log('\nHydration migration');
   ok('migration flag persisted so it will not re-run on next load', raw2.migratedHydrationV1 === true);
 }
 
+console.log('\nCalorie budget migration');
+{
+  /* A save from just before the calorie-budget goal type shipped: no such
+     habit exists yet, and the flag is absent (same as any real device). */
+  const OLD = {
+    version: 1,
+    settings: { dailyTotal: 100, escalationStep: 0.34, maxBoost: 1, recoveryDays: 3, redemptionShare: 0.5, tierPercents: [0.25, 0.45, 0.65, 0.8, 0.92], metaQualifyTierIndex: 3, comebackGoalShare: 0.7, streakMilestones: [3, 7], tdee: 2400 },
+    habits: [
+      { id: 'other1', name: 'Training', emoji: '🏋️', type: 'binary', weight: 20, threshold: 3, max: 5, archived: false, createdAt: '2026-06-01' },
+    ],
+    log: {},
+    seen: [],
+  };
+  mem['habitforge.v1'] = JSON.stringify(OLD);
+
+  // store.load() only re-parses localStorage the first time it's ever
+  // called (it caches after that) — the Hydration test above already
+  // called it once this process, so importBackup() is used here instead:
+  // it always re-normalises whatever is handed to it, same code path.
+  const blob = new Blob([JSON.stringify(OLD)]);
+  blob.text = async () => JSON.stringify(OLD);
+  const s1 = await store.importBackup(blob);
+  const added = s1.habits.find((h) => h.goalSource === 'tdee');
+
+  ok('a Calorie budget habit is added automatically', !!added);
+  ok('weighted at 10, as requested', added?.weight === 10);
+  ok('linked to calories', added?.nutritionLink === 'calories');
+  ok('its cached goal reflects whatever TDEE was already set (2400 - 500)', added?.max === 1900);
+  ok('the pre-existing habit is untouched', s1.habits.find((h) => h.id === 'other1').type === 'binary');
+
+  store.save();
+  const raw2 = JSON.parse(mem['habitforge.v1']);
+  ok('migration flag persisted', raw2.migratedCalorieBudgetV1 === true);
+  ok('exactly one calorie-budget habit was added, not duplicated in the saved file',
+    raw2.habits.filter((h) => h.goalSource === 'tdee').length === 1);
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

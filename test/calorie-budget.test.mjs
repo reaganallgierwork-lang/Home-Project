@@ -171,5 +171,28 @@ console.log('\n10. metrics-habits.js shows the live budget as the chart target, 
     metric.target === 2100);
 }
 
+console.log('\n11. The starter-habit migration never duplicates an existing one');
+{
+  // A backup from a device that already has a calorie-budget habit, but
+  // whose flag is missing (an even older backup, or hand-edited file).
+  const raw = {
+    version: 1,
+    settings: { tdee: 2600, tierPercents: [0.25, 0.45, 0.65, 0.8, 0.92] },
+    habits: [
+      { id: 'x1', name: 'Existing budget', type: 'scale', inputStyle: 'counter', weight: 12, goalSource: 'tdee', deficitTarget: 300, nutritionLink: 'calories', createdAt: '2026-01-01' },
+    ],
+    log: {},
+    meals: [],
+    nutritionLog: {},
+  };
+  const blob = new Blob([JSON.stringify(raw)]);
+  blob.text = async () => JSON.stringify(raw);
+  const restored = await store.importBackup(blob);
+  const budgetHabits = restored.habits.filter((h) => h.goalSource === 'tdee');
+  ok('no second habit is added when one already exists', budgetHabits.length === 1);
+  ok('the existing one is left completely alone', budgetHabits[0].id === 'x1' && budgetHabits[0].deficitTarget === 300);
+  ok('the migration is still marked done so it never re-checks', restored.migratedCalorieBudgetV1 === true);
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

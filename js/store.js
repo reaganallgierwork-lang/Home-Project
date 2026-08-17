@@ -113,6 +113,7 @@ function freshState() {
     seen: [],
     /* one-time data migrations already applied — see normalise() below */
     migratedHydrationV1: true,
+    migratedCalorieBudgetV1: true,
     /* remembered screen state, e.g. the Data tab's last selection */
     ui: {},
 
@@ -211,6 +212,7 @@ function normalise(raw) {
     log: raw.log && typeof raw.log === 'object' ? raw.log : {},
     seen: Array.isArray(raw.seen) ? raw.seen : [],
     migratedHydrationV1: !!raw.migratedHydrationV1,
+    migratedCalorieBudgetV1: !!raw.migratedCalorieBudgetV1,
     /* Remembered screen state (which metric the Data tab was showing, etc).
        Purely cosmetic — safe to be missing or stale. */
     ui: raw.ui && typeof raw.ui === 'object' ? raw.ui : {},
@@ -370,6 +372,44 @@ function normalise(raw) {
       });
     }
     s.migratedHydrationV1 = true;
+  }
+
+  /* ---- one-time migration: add a starter Calorie budget habit -----------
+     The calorie-budget goal type is only useful once a habit actually
+     exists using it — an option sitting in the Type dropdown that nobody
+     goes looking for isn't a live goal. So the first time a device loads
+     this version, one is added automatically at weight 10 (as requested),
+     linked to calories, with the default 500-calorie deficit off whatever
+     TDEE is already set. Runs once per device; retiring or deleting it
+     afterward is normal and it will not come back. Skipped entirely if a
+     calorie-budget habit already exists — from an earlier manual add, or a
+     backup restored from another device that already ran this migration. */
+  if (!s.migratedCalorieBudgetV1) {
+    if (!s.habits.some((h) => h.goalSource === 'tdee')) {
+      const deficitTarget = 500;
+      const budget = Math.max(1, s.settings.tdee - deficitTarget);
+      s.habits.push({
+        id: newId(),
+        name: 'Calorie budget',
+        icon: 'flame',
+        emoji: '',
+        type: 'scale',
+        inputStyle: 'counter',
+        weight: 10,
+        max: budget,
+        threshold: budget,
+        step: 1,
+        unit: 'cal',
+        stepLabel: '',
+        nutritionLink: 'calories',
+        goalSource: 'tdee',
+        deficitTarget,
+        archived: false,
+        archivedAt: null,
+        createdAt: todayKey(),
+      });
+    }
+    s.migratedCalorieBudgetV1 = true;
   }
 
   return s;
