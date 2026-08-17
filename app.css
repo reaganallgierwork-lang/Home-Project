@@ -314,7 +314,11 @@ a { color: var(--gold); }
   display: grid; place-items: center; transition: transform .12s ease;
 }
 .counter .ctr-btn:active { transform: scale(.9); }
-.counter .ctr-btn.plus.maxed { opacity: .35; }
+/* "Maxed" means the goal is met, not that the button stopped working —
+   you can still add past it for your own record, so this reads as a
+   quiet gold accent (the app's usual "done" signal) rather than a dimmed,
+   disabled-looking state. */
+.counter .ctr-btn.plus.maxed { border-color: rgba(212,175,55,.4); color: var(--gold); }
 .counter .ctr-btn .ic { width: 18px; height: 18px; }
 .counter .fill { flex: 1; min-width: 0; }
 .counter .lbl { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--muted); margin-bottom: 5px; }

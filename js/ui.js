@@ -219,14 +219,15 @@ function renderToday(state) {
       const stepWordPlural = `${stepWord}${cups === 1 ? '' : 's'}`;
       const unitTxt = h.unit ? ` ${esc(h.unit)}` : '';
       control = `
-        <div class="counter" data-habit="${h.id}" data-max="${h.max}" data-step="${h.step}">
+        <div class="counter" data-habit="${h.id}" data-step="${h.step}">
           <button class="ctr-btn minus" data-dir="-1" aria-label="Remove a ${esc(stepWord)}">${icon('minus', 18)}</button>
           <div class="fill">
             <div class="lbl"><b>${cups} ${esc(stepWordPlural)}</b><span>${amt}${unitTxt} of ${h.max}${unitTxt}</span></div>
             <div class="bar ${row.success ? 'good' : ''}"><i style="width:${(Math.min(1, amt / h.max) * 100).toFixed(1)}%"></i></div>
           </div>
           <button class="ctr-btn plus ${amt >= h.max ? 'maxed' : ''}" data-dir="1" aria-label="Add a ${esc(stepWord)}">${icon('plus', 18)}</button>
-        </div>`;
+        </div>
+        <button type="button" class="addset ctr-enter" data-habit="${h.id}">${icon('pencil', 12)} Enter an amount</button>`;
     } else if (h.type === 'scale') {
       control = `<div class="scale" data-habit="${h.id}">${[1, 2, 3, 4, 5].map((n) => `
           <button data-val="${n}" class="${row.value === n ? `on ${n < h.threshold ? 'low' : ''}` : ''}">${n}</button>`).join('')}</div>`;
@@ -294,10 +295,14 @@ function renderToday(state) {
     b.onclick = () => {
       const wrap = b.closest('.counter');
       const id = wrap.dataset.habit;
-      const max = +wrap.dataset.max;
       const step = +wrap.dataset.step || 1;
       const cur = store.getEntry(viewDay, id) || 0;
-      const next = Math.max(0, Math.min(max, cur + (+b.dataset.dir) * step));
+      /* No upper cap. Points already top out on their own once you hit the
+         goal — fractionOf() clamps at 1 — but the number you log is your
+         own record, and plenty of people track past 100% on purpose (extra
+         protein, extra water). The app shouldn't refuse to count it just
+         because the goal's been met. */
+      const next = Math.max(0, cur + (+b.dataset.dir) * step);
       /* Back to zero means "not logged" again, same as every other habit —
          not a real 0 worth remembering. */
       store.setEntry(viewDay, id, next > 0 ? next : null);
@@ -305,6 +310,51 @@ function renderToday(state) {
       refresh();
     };
   });
+  document.querySelectorAll('#screen-today .ctr-enter').forEach((b) => {
+    b.onclick = () => openCounterEntrySheet(b.dataset.habit);
+  });
+}
+
+/** A counter habit's "Enter an amount" sheet — the fast path for a goal
+    that would otherwise take dozens of taps to reach (145g of protein is
+    145 taps at 1g a tap). Whatever you type is ADDED to today's running
+    total, same direction as the +/- buttons, just in bigger steps. */
+function openCounterEntrySheet(habitId) {
+  const state = store.get();
+  const h = state.habits.find((x) => x.id === habitId);
+  if (!h) return;
+  const cur = store.getEntry(viewDay, habitId) || 0;
+  const unitTxt = h.unit ? ` ${esc(h.unit)}` : '';
+
+  const close = modal(`
+    <h3>Add to ${esc(h.name)}</h3>
+    <div class="lede">Currently ${cur}${unitTxt} of ${h.max}${unitTxt}. This adds to that — it doesn't replace it.</div>
+    <div class="field">
+      <label>Amount to add${h.unit ? ` (${esc(h.unit)})` : ''}</label>
+      <input type="number" inputmode="decimal" id="ctrAmt" placeholder="e.g. 40">
+    </div>
+    <button class="btn primary" id="ctrAdd">Add</button>
+    <button class="btn ghost" id="ctrCancel">Cancel</button>`);
+
+  const input = el('ctrAmt');
+  input.focus();
+
+  const submit = () => {
+    const raw = input.value.trim();
+    const add = +raw;
+    if (raw === '' || !Number.isFinite(add)) { input.focus(); return; }
+    /* Same no-upper-cap rule as the tap buttons — this is a bigger step,
+       not a different rule. Floored at 0 so a large negative correction
+       can't leave the day in a confusing negative state. */
+    const next = Math.max(0, cur + add);
+    store.setEntry(viewDay, habitId, next > 0 ? next : null);
+    close();
+    buzz();
+    refresh();
+  };
+  el('ctrAdd').onclick = submit;
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+  el('ctrCancel').onclick = close;
 }
 
 function dayHeadline(d, isToday) {

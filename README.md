@@ -104,6 +104,21 @@ score; it takes a bigger slice and leaves less for everything else.
 Sleep is rated 1–5 and scores proportionally: a 5 earns its full slice, a 3
 earns 60% of it.
 
+### Counting up to a goal
+
+A counter habit (ounces of water, grams of protein) scores the same way —
+proportionally, up to its goal. Tap **+** to add one step at a time, or tap
+**Enter an amount** to type a number in one go and add it to today's total —
+the fast path for a 145g protein goal, which would otherwise be 145 taps.
+Typing an amount always **adds** to what's already logged; it never replaces
+it, so two entries in the same day combine correctly.
+
+**There's no ceiling.** Points stop growing once you hit the goal — that's
+just the shape of a fixed 100-point pot — but the number itself keeps
+counting past it for as long as you keep logging. If your goal is 145g and
+you actually eat 210g, the app shows 210g, not a number clamped down to
+145. Real intake is worth recording even after the points are maxed.
+
 ### Separate streaks
 
 Every habit keeps **its own** current streak and its own longest-ever streak.
