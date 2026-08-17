@@ -345,11 +345,50 @@ export function sessionRecords(state, session) {
   return out;
 }
 
+/* ---------------------------------------------------------------------------
+   Flattening every session into set records is the most expensive thing this
+   file does, and almost every screen that shows training data wants the same
+   answer. So it is computed once and reused until the data actually changes.
+
+   Invalidation is wired to store's save() from ui.js rather than done here,
+   because store.js already imports this file — importing it back would be a
+   cycle. The `state` identity check is a second line of defence that also
+   keeps unit tests honest, since each test builds a fresh state object.
+
+   The arrays handed out are the cached ones: read them, don't mutate them.
+   ------------------------------------------------------------------------- */
+
+let recordCache = null;
+
+/** Drop the memoised index. Called on every save — see ui.js. */
+export function invalidateRecords() {
+  recordCache = null;
+}
+
+function index(state) {
+  if (recordCache && recordCache.state === state) return recordCache;
+  const all = [];
+  (state.sessions || []).forEach((s) => sessionRecords(state, s).forEach((r) => all.push(r)));
+  /* Bucketing by exercise here means personalBests() and the exercise screen
+     no longer each re-scan every session you have ever logged. */
+  const byExercise = new Map();
+  all.forEach((r) => {
+    let bucket = byExercise.get(r.exerciseId);
+    if (!bucket) { bucket = []; byExercise.set(r.exerciseId, bucket); }
+    bucket.push(r);
+  });
+  recordCache = { state, all, byExercise };
+  return recordCache;
+}
+
 /** Every performed set, ever. The backbone of all workout metrics. */
 export function allRecords(state) {
-  const out = [];
-  (state.sessions || []).forEach((s) => sessionRecords(state, s).forEach((r) => out.push(r)));
-  return out;
+  return index(state).all;
+}
+
+/** Just one exercise's sets — a lookup, not a scan of everything. */
+export function recordsFor(state, exerciseId) {
+  return index(state).byExercise.get(exerciseId) || [];
 }
 
 /* ------------------------------------------------------------------ maths - */
@@ -492,7 +531,7 @@ export function templateFromSession(session) {
  * max. Deliberately ignores metcon reps for the estimate — see blockRecords.
  */
 export function personalBests(state, exerciseId) {
-  const recs = allRecords(state).filter((r) => r.exerciseId === exerciseId);
+  const recs = recordsFor(state, exerciseId);
   if (!recs.length) return null;
 
   let heaviest = null;

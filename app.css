@@ -109,7 +109,7 @@ a { color: var(--gold); }
 }
 
 /* Small all-caps labels — the board's quiet connective tissue. */
-.eyebrow, .section-title, .tile span, .stat span, .streak .count span,
+.section-title, .tile span, .stat span, .streak .count span,
 .bc-t span, .tabbar button, .pick-head {
   text-transform: uppercase;
   letter-spacing: .12em;
@@ -417,22 +417,18 @@ a { color: var(--gold); }
 
 /* badge animations — subtle, and they stop for anyone who asks for less motion */
 @keyframes bxspin { to { transform: rotate(360deg); } }
-@keyframes bxspinrev { to { transform: rotate(-360deg); } }
 @keyframes bxpulse { 0%,100% { opacity: .75; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
 @keyframes bxsheen { 0% { transform: translateX(0); } 100% { transform: translateX(190px); } }
-@keyframes bxhue { 0%,100% { filter: hue-rotate(0deg); } 50% { filter: hue-rotate(24deg); } }
 @keyframes bxflicker { 0%,100% { transform: scaleY(1) translateY(0); } 50% { transform: scaleY(1.05) translateY(-1.5px); } }
 
 .bx-spin      { animation: bxspin 26s linear infinite; }
 .bx-spin-slow { animation: bxspin 60s linear infinite; }
-.bx-spin-rev  { animation: bxspinrev 34s linear infinite; }
 .bx-pulse     { animation: bxpulse 3.4s ease-in-out infinite; transform-origin: 50px 50px; }
 .bx-sheen     { animation: bxsheen 4.5s ease-in-out infinite; }
-.bx-hue       { animation: bxhue 7s ease-in-out infinite; }
 .bx-flicker   { animation: bxflicker 2.2s ease-in-out infinite; transform-origin: 50px 70px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .bx-spin, .bx-spin-slow, .bx-spin-rev, .bx-pulse, .bx-sheen, .bx-hue, .bx-flicker { animation: none; }
+  .bx-spin, .bx-spin-slow, .bx-pulse, .bx-sheen, .bx-flicker { animation: none; }
   * { scroll-behavior: auto !important; }
 }
 

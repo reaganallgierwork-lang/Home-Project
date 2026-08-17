@@ -48,7 +48,11 @@
        way offline. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap">
+  <!-- A weight RANGE, not a list: Google serves one variable font file
+       instead of four separate static ones. It is also more correct — the
+       stylesheet uses 650, 750 and 800, which are not in a 400/500/600/700
+       list and were being rounded to the nearest weight that was. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400..800&display=swap">
 
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">

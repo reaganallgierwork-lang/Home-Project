@@ -21,15 +21,14 @@ import * as store from './store.js';
 import {
   BLOCK_TYPES, CATEGORIES, TRACK_MODES, makeBlock, makeSet, makeMovement,
   fillEqualSets, describeBlock, blockTitle, blockTypeInfo, exerciseById,
-  exerciseName, sessionFromTemplate, templateFromSession, sessionVolume,
-  sessionSetCount, sessionRecords, personalBests, fmtWeight,
-  fmtDuration, parseDuration, allRecords, isBodyweightLoaded,
+  exerciseName, sessionFromTemplate, templateFromSession,
+  sessionSetCount, sessionRecords, recordVolume, personalBests, fmtWeight,
+  fmtDuration, parseDuration, recordsFor, isBodyweightLoaded, invalidateRecords,
 } from './workouts.js';
 import { icon } from './icons.js';
 import { openSheet as sheet, closeAllSheets as closeAll } from './sheet.js';
+import { el, esc, toast } from './dom.js';
 
-const el = (id) => document.getElementById(id);
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (v) => (Number.isFinite(+v) && v !== '' && v !== null ? +v : null);
 
 let view = 'home';
@@ -97,12 +96,15 @@ function renderHome(state, unit) {
     ${recent.length ? `
       <div class="section-title">Recent</div>
       ${recent.map((s) => {
-    const vol = sessionVolume(state, s);
+    /* One flatten per card, not two — sessionVolume() and sessionSetCount()
+       would each redo the same work for the same session. */
+    const recs = sessionRecords(state, s);
+    const vol = recs.reduce((a, r) => a + recordVolume(r), 0);
     return `
         <div class="wcard" data-sess="${esc(s.id)}">
           <div class="wc-body">
             <div class="wc-name">${esc(s.name)}</div>
-            <div class="wc-sub">${esc(store.dayLabel(s.day, { weekday: 'short', month: 'short', day: 'numeric' }))} · ${sessionSetCount(state, s)} sets${vol ? ` · ${Math.round(vol).toLocaleString()} ${unit}` : ''}</div>
+            <div class="wc-sub">${esc(store.dayLabel(s.day, { weekday: 'short', month: 'short', day: 'numeric' }))} · ${recs.length} sets${vol ? ` · ${Math.round(vol).toLocaleString()} ${unit}` : ''}</div>
           </div>
           <span class="wc-chev">${icon('chevronRight', 18)}</span>
         </div>`;
@@ -603,6 +605,10 @@ function configMetcon(state, block, done, isNew) {
 
 let saveTimer = null;
 function queueSave(session) {
+  /* The session object is already mutated by the time this runs, so the
+     memoised record index is stale from this moment, not from when the
+     debounced save lands. */
+  invalidateRecords();
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => store.saveSession(session), 350);
 }
@@ -868,7 +874,7 @@ function openSessionMenu(state, session) {
     const t = templateFromSession(session);
     store.saveTemplate(t);
     close();
-    toast('Saved', `"${t.name}" is now in your workouts.`);
+    toast({ glyph: 'dumbbell', tone: 'streak', ms: 3800, title: 'Saved', body: `"${t.name}" is now in your workouts.` });
   };
   el('sDel').onclick = () => {
     if (!confirm('Delete this workout and everything logged in it?')) return;
@@ -910,7 +916,7 @@ function finishSheet(state, session) {
     close();
     view = 'home';
     redraw();
-    toast('Workout logged', `${sessionSetCount(state, session)} sets in the book.`);
+    toast({ glyph: 'dumbbell', tone: 'streak', ms: 3800, title: 'Workout logged', body: `${sessionSetCount(state, session)} sets in the book.` });
   };
   el('cancelFinish').onclick = close;
 }
@@ -1020,7 +1026,9 @@ function renderExercise(state, unit) {
   const ex = exerciseById(state, exerciseView);
   if (!ex) { view = 'home'; return redraw(); }
   const pb = personalBests(state, ex.id);
-  const recs = allRecords(state).filter((r) => r.exerciseId === ex.id);
+  /* Same set of records personalBests just looked at — a keyed lookup rather
+     than re-flattening every session in your history a second time. */
+  const recs = recordsFor(state, ex.id);
 
   /* Group the recent history by day, newest first. */
   const byDay = new Map();
@@ -1078,15 +1086,6 @@ function renderExercise(state, unit) {
    little helpers
    ========================================================================== */
 
-function toast(title, body) {
-  const box = el('toasts');
-  if (!box) return;
-  const n = document.createElement('div');
-  n.className = 'toast streak';
-  n.innerHTML = `<div class="ic-wrap">${icon('dumbbell', 20)}</div><div class="tx"><div class="tt">${esc(title)}</div><div class="tb">${esc(body)}</div></div>`;
-  box.appendChild(n);
-  setTimeout(() => { n.classList.add('out'); setTimeout(() => n.remove(), 320); }, 3800);
-}
 
 function buzz() {
   try { navigator.vibrate?.(12); } catch { /* not supported */ }

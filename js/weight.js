@@ -14,9 +14,8 @@
 import * as store from './store.js';
 import { icon } from './icons.js';
 import { openSheet as sheet, lockScroll, unlockScroll } from './sheet.js';
+import { el, esc, toast } from './dom.js';
 
-const el = (id) => document.getElementById(id);
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const round1 = (n) => Math.round(n * 10) / 10;
 
 let redraw = () => {};
@@ -195,7 +194,7 @@ export function openBodyEntrySheet(state, day, onSaved = () => {}) {
     close();
     onSaved();
     if (photoDropped) {
-      toast('bodyweight', 'Weight saved', 'The photo was too large to fit — everything else saved fine.');
+      toast({ glyph: 'bodyweight', tone: 'streak', title: 'Weight saved', body: 'The photo was too large to fit — everything else saved fine.' });
     }
   };
 
@@ -276,12 +275,3 @@ async function compressPhoto(file) {
    this module has no dependency on it (see the file header).
    ========================================================================== */
 
-function toast(glyph, title, body) {
-  const box = document.getElementById('toasts');
-  if (!box) return;
-  const n = document.createElement('div');
-  n.className = 'toast streak';
-  n.innerHTML = `<div class="ic-wrap">${icon(glyph, 20)}</div><div class="tx"><div class="tt">${esc(title)}</div><div class="tb">${esc(body)}</div></div>`;
-  box.appendChild(n);
-  setTimeout(() => { n.classList.add('out'); setTimeout(() => n.remove(), 320); }, 4200);
-}

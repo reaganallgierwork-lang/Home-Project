@@ -22,9 +22,8 @@ import { bodyTableColumns } from './metrics-weight.js';
 import { renderChart } from './chart.js';
 import { icon } from './icons.js';
 import { openSheet } from './sheet.js';
+import { el, esc } from './dom.js';
 
-const el = (id) => document.getElementById(id);
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /* View state lives in the save file so the tab reopens where you left it. */
 function ui(state) {

@@ -433,6 +433,7 @@ on your phone about a minute later.
 | `js/icons.js` | The line-icon set, the picker list, and the emoji-to-icon migration map. |
 | `js/sheet.js` | The shared bottom-sheet overlay — every picker, form and detail view — including swipe-to-dismiss. |
 | `js/boot.js` | Starts the app. Separate from `index.html` so the security policy there can forbid inline scripts. |
+| `js/dom.js` | `el`, `esc` and `toast` — shared so there is one HTML escaper, not four copies of it. |
 | `app.css` | All the styling. The colours are variables at the very top. |
 | `index.html` | The page shell. |
 | `sw.js` | Makes the app work offline. |

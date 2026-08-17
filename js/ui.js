@@ -24,14 +24,14 @@ import './metrics-habits.js';          // registers the habits metric source
 import './metrics-workouts.js';        // registers the training metric source
 import { renderAnalyze } from './analyze.js';
 import { renderTrain, openSession as openTrainSession } from './train.js';
-import { sessionVolume, sessionSetCount } from './workouts.js';
+import { sessionVolume, sessionSetCount, invalidateRecords } from './workouts.js';
 import './metrics-weight.js';          // registers the body-weight metric source
 import { renderWeight, openBodyEntrySheet, openPhotoViewer } from './weight.js';
 import { icon, PICKER_ICONS, hasIcon } from './icons.js';
 import { openSheet as modal } from './sheet.js';
+import { el, esc, toast } from './dom.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
-const el = (id) => document.getElementById(id);
 
 /* Which day the Today screen is showing. Defaults to today; the arrows let you
    walk back and fill in anything you missed. */
@@ -44,7 +44,6 @@ const round = (n) => Math.round(n);
 /* A habit's glyph: an icon key when we have one, otherwise whatever character
    the habit was saved with, so nothing ever renders blank. */
 const glyph = (h, size = 20) => icon(h.icon || h.emoji, size);
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /* ============================================================================
    BOOT
@@ -110,10 +109,30 @@ function bindTabs() {
   });
 }
 
-/** Recompute everything and redraw the visible screen. */
+/* compute() replays your entire history from the first day every time it
+   runs, which is what makes backfilling a missed day genuinely repair the
+   streak it belonged to. That is worth paying for when the data changes —
+   but switching tabs does not change the data, and refresh() runs on every
+   single tap. So the result is kept until something actually writes.
+
+   `dirty` is set by store's own save listener, the same mechanism the
+   metrics caches already use, so nothing can change the data without
+   invalidating this. The endDay check covers the other way it can go
+   stale: the app being left open until after midnight. */
+let dirty = true;
+store.subscribe(() => {
+  dirty = true;
+  /* The flattened workout records are derived from the same data. */
+  invalidateRecords();
+});
+
+/** Recompute if anything changed, then redraw the visible screen. */
 export function refresh() {
   const state = store.get();
-  R = compute(state);
+  if (dirty || !R || R.endDay !== store.todayKey()) {
+    R = compute(state);
+    dirty = false;
+  }
   const screen = SCREENS.find((s) => s.id === current) || SCREENS[0];
   screen.render(state);
   fireCelebrations(state);
@@ -1045,20 +1064,11 @@ function fireCelebrations(state) {
   if (!fresh.length) return;
   store.markSeen(fresh.map((e) => e.key));
   fresh.slice(0, 3).forEach((e, i) => setTimeout(() => {
-    toast(e);
+    toast({ glyph: e.glyph || e.emoji || 'star', title: e.title, body: e.body, tone: e.tone, ms: 4600 });
     if (e.tone === 'tier' || e.tone === 'perfect') confetti();
   }, i * 700));
 }
 
-function toast(e) {
-  const box = el('toasts');
-  const node = document.createElement('div');
-  node.className = `toast ${e.tone || ''}`;
-  node.innerHTML = `<div class="ic-wrap">${icon(e.glyph || e.emoji || 'star', 20)}</div><div class="tx"><div class="tt">${esc(e.title)}</div><div class="tb">${esc(e.body)}</div></div>`;
-  box.appendChild(node);
-  node.onclick = () => node.remove();
-  setTimeout(() => { node.classList.add('out'); setTimeout(() => node.remove(), 320); }, 4600);
-}
 
 function confetti() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
