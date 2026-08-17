@@ -396,6 +396,15 @@ the device.
 or Google Drive now and then. **Restore from backup** loads it back — that's
 also how you move everything to a new phone.
 
+**Only restore a backup you made yourself.** A backup is a plain `.json` file
+and restoring it replaces your data with whatever is inside it. The app checks
+what it loads — a "photo" has to be a real embedded image, dates have to be
+dates, numbers have to be numbers, and anything else is dropped rather than
+trusted — and the page runs under a strict content-security policy that
+forbids loading outside code and blocks the page from sending anything to any
+other server. But the simple rule still holds: it's your file, from your
+phone, and there's no reason to load someone else's.
+
 ---
 
 ## For when you want to edit the code
@@ -423,6 +432,7 @@ on your phone about a minute later.
 | `js/ids.js` | The shared id generator, kept separate so modules needn't import each other. |
 | `js/icons.js` | The line-icon set, the picker list, and the emoji-to-icon migration map. |
 | `js/sheet.js` | The shared bottom-sheet overlay — every picker, form and detail view — including swipe-to-dismiss. |
+| `js/boot.js` | Starts the app. Separate from `index.html` so the security policy there can forbid inline scripts. |
 | `app.css` | All the styling. The colours are variables at the very top. |
 | `index.html` | The page shell. |
 | `sw.js` | Makes the app work offline. |
@@ -461,6 +471,7 @@ node migration.test.mjs   # 11 checks — the hydration counter migration
 node metrics.test.mjs     # 44 checks — bucketing, aggregation, trends
 node workouts.test.mjs    # 63 checks — blocks, set records, 1RM, templates, bodyweight loading
 node weight.test.mjs      # 38 checks — weigh-ins, photo storage, the quota fallback
+node security.test.mjs    # 20 checks — what a restored backup file is allowed to contain
 ```
 
-Needs Node.js installed. All 212 should pass.
+Needs Node.js installed. All 232 should pass.

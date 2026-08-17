@@ -77,11 +77,11 @@ export function renderWeight(state) {
 
 function entryRowHtml(e, unit) {
   const thumb = e.photo
-    ? `<img class="wthumb" src="${e.photo}" alt="">`
+    ? `<img class="wthumb" src="${esc(e.photo)}" alt="">`
     : `<div class="wthumb placeholder">${icon('bodyweight', 18)}</div>`;
   const title = e.weight != null ? `${e.weight} ${unit}` : 'Photo only';
   return `
-    <div class="wcard" data-entry="${e.day}">
+    <div class="wcard" data-entry="${esc(e.day)}">
       ${thumb}
       <div class="wc-body">
         <div class="wc-name">${esc(title)}</div>
@@ -111,7 +111,7 @@ export function openBodyEntrySheet(state, day, onSaved = () => {}) {
 
   const photoTileHtml = () => (photoData
     ? `<div class="photo-tile has-photo">
-         <img src="${photoData}" alt="">
+         <img src="${esc(photoData)}" alt="">
          <button type="button" class="photo-remove" id="photoRemove" aria-label="Remove photo">${icon('close', 16)}</button>
          <button type="button" class="photo-expand" id="photoExpand" aria-label="View full size">${icon('expand', 15)}</button>
        </div>`
@@ -125,7 +125,7 @@ export function openBodyEntrySheet(state, day, onSaved = () => {}) {
     <div class="lede">${existing ? 'Change anything, or remove this entry entirely.' : "Optional photo — nobody but you sees this file."}</div>
     <div class="field">
       <label>Date</label>
-      <input type="date" id="wDate" value="${day}" max="${store.todayKey()}">
+      <input type="date" id="wDate" value="${esc(day)}" max="${store.todayKey()}">
     </div>
     <div class="field">
       <label>Weight</label>
@@ -219,7 +219,7 @@ export function openPhotoViewer(dataUrl) {
   back.className = 'photo-viewer';
   back.innerHTML = `
     <button class="pv-close" aria-label="Close">${icon('close', 20)}</button>
-    <img src="${dataUrl}" alt="">`;
+    <img src="${esc(dataUrl)}" alt="">`;
   document.body.appendChild(back);
   lockScroll();
   const close = () => { back.remove(); unlockScroll(); };

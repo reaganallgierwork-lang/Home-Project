@@ -131,7 +131,7 @@ function renderTrends(state, u) {
     ${filters}
     <div class="card">
       <div class="hero-wrap">
-        <div class="hero">${fmt(stats.headline)}</div>
+        <div class="hero">${esc(fmt(stats.headline))}</div>
         <div class="hero-sub">${esc(AGG_LABELS[agg])} · ${esc(metric.group)} — ${esc(metric.label)}</div>
         ${trendChip}
       </div>

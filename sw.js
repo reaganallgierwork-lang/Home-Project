@@ -10,7 +10,7 @@
    every phone to throw away the old copy and pull the new one.
    ========================================================================== */
 
-const CACHE = 'ascent-v10';
+const CACHE = 'ascent-v11';
 
 const FILES = [
   './',
@@ -18,6 +18,7 @@ const FILES = [
   './app.css',
   './manifest.webmanifest',
   './js/ui.js',
+  './js/boot.js',
   './js/engine.js',
   './js/store.js',
   './js/badges.js',

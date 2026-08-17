@@ -4,6 +4,30 @@
   <meta charset="utf-8">
   <title>Ascent</title>
 
+  <!-- Content-Security-Policy: the app's seatbelt.
+       Everything here runs on your phone and your data never leaves it, so
+       this policy is deliberately tight — it says, in order: run no code
+       except JavaScript files served from this app; allow styles from here
+       and Google Fonts; allow images only from here or embedded data: URLs
+       (that is what a progress photo is); and — the important one —
+       connect-src 'self' means the page cannot send anything to any other
+       server. Even if something malformed ever did get rendered as markup,
+       it would have nowhere to send your data and no way to load code.
+       There is no 'unsafe-inline' for scripts, which is why the boot code
+       lives in js/boot.js rather than in a <script> block below. -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'none';
+    script-src 'self';
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    img-src 'self' data:;
+    connect-src 'self';
+    manifest-src 'self';
+    worker-src 'self';
+    base-uri 'none';
+    form-action 'none';
+  ">
+
   <!-- viewport-fit=cover lets the app paint under the notch and home indicator -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
   <meta name="description" content="Ascent — fitness, habits, legacy. Track habits, build streaks, earn badges.">
@@ -37,18 +61,8 @@
   <div id="app"></div>
   <nav class="tabbar"></nav>
 
-  <script type="module">
-    import { start } from './js/ui.js';
-    start();
-
-    /* The service worker is what makes the app open instantly and work with no
-       signal. It only registers on a real https address, so opening the file
-       locally just skips it harmlessly. */
-    if ('serviceWorker' in navigator && location.protocol === 'https:') {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(() => {});
-      });
-    }
-  </script>
+  <!-- Boot lives in a real file, not inline here, so the Content-Security-
+       Policy above can forbid inline scripts entirely. -->
+  <script type="module" src="js/boot.js"></script>
 </body>
 </html>

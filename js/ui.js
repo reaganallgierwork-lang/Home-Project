@@ -685,7 +685,7 @@ function openDayDetail(state, dk) {
 
     const weightBit = entry ? `
       <div class="day-weight">
-        ${entry.photo ? `<img class="wthumb" src="${entry.photo}" alt="" id="dayPhotoThumb" style="cursor:pointer">` : `<div class="wthumb placeholder">${icon('bodyweight', 20)}</div>`}
+        ${entry.photo ? `<img class="wthumb" src="${esc(entry.photo)}" alt="" id="dayPhotoThumb" style="cursor:pointer">` : `<div class="wthumb placeholder">${icon('bodyweight', 20)}</div>`}
         <div>
           <div class="dw-num">${entry.weight != null ? `${entry.weight} ${esc(unit)}` : 'Photo only'}</div>
           <div class="dw-sub">${entry.photo ? 'Tap the photo to view it full size' : 'No photo attached'}</div>

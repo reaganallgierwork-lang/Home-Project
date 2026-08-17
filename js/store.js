@@ -127,6 +127,41 @@ function freshState() {
   };
 }
 
+/* ---------------------------------------------------------------- safety --
+
+   Everything below treats a loaded save file as UNTRUSTED. Your own data is
+   obviously fine, but "restore from backup" accepts an arbitrary .json a
+   file picker handed us, and that file's contents get rendered straight into
+   the app's HTML. A backup emailed to you by someone else is the one and
+   only way hostile data can reach this app, so it gets checked properly.
+   -------------------------------------------------------------------------- */
+
+/* A photo must be a base64 image data URL and nothing else.
+   Checking only the "data:image/" prefix is NOT enough: a value like
+       data:image/png," onerror="<script>
+   passes a prefix test, and then breaks straight out of the src="..." it is
+   interpolated into. The character class below cannot contain a quote, an
+   angle bracket or a space, so there is nothing left to break out with.
+   SVG is deliberately not in the list — it is the one image format that can
+   carry script. */
+const PHOTO_RE = /^data:image\/(png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/]+=*$/;
+
+export function isSafePhoto(v) {
+  return typeof v === 'string' && v.length < 4_000_000 && PHOTO_RE.test(v);
+}
+
+/** A day key must look like a date, not like markup. */
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Coerce to a plain string, capped so one field cannot bloat the save. */
+const str = (v, fallback = '', max = 200) => {
+  const s = typeof v === 'string' ? v : (v === null || v === undefined ? '' : String(v));
+  return (s || fallback).slice(0, max);
+};
+
+/** Coerce to a finite number, or fall back. Rejects "12\" onmouseover=..." */
+const nOr = (v, fallback) => (Number.isFinite(+v) && v !== '' && v !== null ? +v : fallback);
+
 /** Fill in anything a older/partial save is missing, so upgrades never crash. */
 function normalise(raw) {
   const base = freshState();
@@ -160,10 +195,32 @@ function normalise(raw) {
     const e = s.bodyLog[day] || {};
     const weight = (e.weight === null || e.weight === undefined) ? null
       : (Number.isFinite(+e.weight) ? +e.weight : null);
-    const photo = typeof e.photo === 'string' && e.photo.startsWith('data:image/') ? e.photo : null;
-    if (weight === null && !photo) delete s.bodyLog[day];
+    const photo = isSafePhoto(e.photo) ? e.photo : null;
+    /* The key itself is rendered into a data- attribute, so a key that isn't
+       a date is dropped rather than trusted. */
+    if (!DAY_RE.test(day) || (weight === null && !photo)) delete s.bodyLog[day];
     else s.bodyLog[day] = { weight, photo };
   });
+
+  /* Habits arrive straight from the file and are rendered into both text and
+     HTML attributes, so every field the UI reads is coerced to its expected
+     shape here rather than trusted. */
+  s.habits = s.habits.filter((h) => h && typeof h === 'object').map((h) => ({
+    ...h,
+    id: str(h.id, newId(), 64),
+    name: str(h.name, 'Untitled', 120),
+    unit: str(h.unit, '', 24),
+    stepLabel: str(h.stepLabel, '', 24),
+    icon: str(h.icon, '', 64),
+    emoji: str(h.emoji, '', 16),
+    type: h.type === 'scale' ? 'scale' : 'binary',
+    inputStyle: h.inputStyle === 'counter' ? 'counter' : 'rating',
+    weight: nOr(h.weight, 10),
+    max: nOr(h.max, 5),
+    step: nOr(h.step, 1),
+    threshold: nOr(h.threshold, 3),
+    archived: !!h.archived,
+  }));
 
   s.exercises = s.exercises.map((e) => ({
     id: e.id || newId(),
