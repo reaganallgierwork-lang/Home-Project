@@ -611,27 +611,30 @@ function renderLog(state, unit) {
     </div>
 
     <div class="card tight totals" id="totals">${totalsHtml(state, session, unit)}</div>
+    ${done ? '<div class="hint" style="text-align:center;margin:-2px 0 12px">Finished workouts are locked. Reopen it below to change anything.</div>' : ''}
 
-    ${session.blocks.map((b) => logBlock(state, b, unit)).join('')
+    ${session.blocks.map((b) => logBlock(state, b, unit, done)).join('')
       || `<div class="empty"><div class="big">${icon('layers', 34)}</div>Nothing in this workout yet.</div>`}
 
-    <button class="btn" id="addBlockLog" style="margin-top:12px">${icon('plus', 17)} Add a block</button>
+    ${done ? '' : `<button class="btn" id="addBlockLog" style="margin-top:12px">${icon('plus', 17)} Add a block</button>`}
     ${done
     ? '<button class="btn ghost" id="reopenBtn">Reopen this workout</button>'
     : '<button class="btn primary" id="finishBtn">Finish workout</button>'}`;
 
   el('backBtn').onclick = () => { view = 'home'; redraw(); };
   el('sessMenu').onclick = () => openSessionMenu(state, session);
-  el('addBlockLog').onclick = () => pickBlockType(state, (blk) => {
-    session.blocks.push(blk);
-    store.saveSession(session);
-    redraw();
-  });
-  if (done) el('reopenBtn').onclick = () => { session.finishedAt = null; store.saveSession(session); redraw(); };
-  else el('finishBtn').onclick = () => finishSheet(state, session);
-
-  wireLogBlock(state, session, unit);
-  wireBlockCards(state, session.blocks, () => { store.saveSession(session); redraw(); });
+  if (done) {
+    el('reopenBtn').onclick = () => { session.finishedAt = null; store.saveSession(session); redraw(); };
+  } else {
+    el('finishBtn').onclick = () => finishSheet(state, session);
+    el('addBlockLog').onclick = () => pickBlockType(state, (blk) => {
+      session.blocks.push(blk);
+      store.saveSession(session);
+      redraw();
+    });
+    wireLogBlock(state, session, unit);
+    wireBlockCards(state, session.blocks, () => { store.saveSession(session); redraw(); });
+  }
 }
 
 function totalsHtml(state, session, unit) {
@@ -650,21 +653,23 @@ function totalsHtml(state, session, unit) {
     </div>`;
 }
 
-function logBlock(state, b, unit) {
+function logBlock(state, b, unit, done = false) {
   const info = blockTypeInfo(b.type);
+  const dis = done ? 'disabled' : '';
   const head = `
     <div class="bc-head">
       <span class="bc-ic">${icon(info.icon, 19)}</span>
       <div class="bc-t"><b>${esc(blockTitle(state, b))}</b><span>${esc(info.label)}</span></div>
-      <button class="bc-btn" data-cfg="${esc(b.id)}" aria-label="Edit">${icon('pencil', 14)}</button>
-      <button class="bc-btn" data-del="${esc(b.id)}" aria-label="Remove">${icon('close', 14)}</button>
+      ${done ? '' : `
+        <button class="bc-btn" data-cfg="${esc(b.id)}" aria-label="Edit">${icon('pencil', 14)}</button>
+        <button class="bc-btn" data-del="${esc(b.id)}" aria-label="Remove">${icon('close', 14)}</button>`}
     </div>`;
 
   if (b.type === 'straight') {
     const ex = exerciseById(state, b.exerciseId);
     return `<div class="block-card">${head}
-      ${setRows(b.sets, b.id, null, ex, unit)}
-      <button class="addset" data-addset="${esc(b.id)}">${icon('plus', 14)} Add set</button>
+      ${setRows(b.sets, b.id, null, ex, unit, done)}
+      ${done ? '' : `<button class="addset" data-addset="${esc(b.id)}">${icon('plus', 14)} Add set</button>`}
     </div>`;
   }
 
@@ -679,9 +684,9 @@ function logBlock(state, b, unit) {
     return `
               <div class="set-row log ss">
                 <span class="sr-n" title="${esc(exerciseName(state, it.exerciseId))}">${esc(shortName(exerciseName(state, it.exerciseId)))}</span>
-                ${ex && (ex.track === 'weight_reps' || isBodyweightLoaded(ex)) ? `<input type="number" inputmode="decimal" data-ss="${esc(b.id)}:${ii}:${r}" data-f="weight" value="${s.weight ?? ''}" placeholder="${isBodyweightLoaded(ex) ? `+${unit}` : unit}">` : ''}
-                <input type="number" inputmode="numeric" data-ss="${esc(b.id)}:${ii}:${r}" data-f="reps" value="${s.reps ?? ''}" placeholder="reps">
-                <button class="tick ${s.done ? 'on' : ''}" data-sstick="${esc(b.id)}:${ii}:${r}" aria-label="Done">${icon('check', 19)}</button>
+                ${ex && (ex.track === 'weight_reps' || isBodyweightLoaded(ex)) ? `<input type="number" inputmode="decimal" data-ss="${esc(b.id)}:${ii}:${r}" data-f="weight" value="${s.weight ?? ''}" placeholder="${isBodyweightLoaded(ex) ? `+${unit}` : unit}" ${dis}>` : ''}
+                <input type="number" inputmode="numeric" data-ss="${esc(b.id)}:${ii}:${r}" data-f="reps" value="${s.reps ?? ''}" placeholder="reps" ${dis}>
+                <button class="tick ${s.done ? 'on' : ''}" data-sstick="${esc(b.id)}:${ii}:${r}" aria-label="Done" ${dis}>${icon('check', 19)}</button>
               </div>`;
   }).join('')}
         </div>`).join('')}
@@ -699,21 +704,21 @@ function logBlock(state, b, unit) {
   if (b.type === 'amrap') {
     result = `
       <div class="res-row">
-        <div class="field"><label>Rounds</label><input type="number" inputmode="numeric" data-res="${esc(b.id)}:rounds" value="${b.result.rounds ?? ''}" placeholder="0"></div>
-        <div class="field"><label>+ extra reps</label><input type="number" inputmode="numeric" data-res="${esc(b.id)}:extraReps" value="${b.result.extraReps ?? ''}" placeholder="0"></div>
+        <div class="field"><label>Rounds</label><input type="number" inputmode="numeric" data-res="${esc(b.id)}:rounds" value="${b.result.rounds ?? ''}" placeholder="0" ${dis}></div>
+        <div class="field"><label>+ extra reps</label><input type="number" inputmode="numeric" data-res="${esc(b.id)}:extraReps" value="${b.result.extraReps ?? ''}" placeholder="0" ${dis}></div>
       </div>
       <div class="hint">${b.minutes} minute cap.</div>`;
   } else if (b.type === 'rft') {
     result = `
       <div class="res-row">
-        <div class="field"><label>Time (m:ss)</label><input type="text" inputmode="numeric" data-res="${esc(b.id)}:secondsText" value="${b.result.seconds ? fmtDuration(b.result.seconds) : ''}" placeholder="12:30"></div>
-        <div class="field"><label>Rounds done</label><input type="number" inputmode="numeric" data-res="${esc(b.id)}:roundsDone" value="${b.result.roundsDone ?? ''}" placeholder="${b.rounds}"></div>
+        <div class="field"><label>Time (m:ss)</label><input type="text" inputmode="numeric" data-res="${esc(b.id)}:secondsText" value="${b.result.seconds ? fmtDuration(b.result.seconds) : ''}" placeholder="12:30" ${dis}></div>
+        <div class="field"><label>Rounds done</label><input type="number" inputmode="numeric" data-res="${esc(b.id)}:roundsDone" value="${b.result.roundsDone ?? ''}" placeholder="${b.rounds}" ${dis}></div>
       </div>
       <div class="hint">${b.rounds} rounds · ${b.capMinutes} min cap. Leave rounds blank if you finished them all.</div>`;
   } else if (b.type === 'emom') {
     result = `
       <div class="res-row">
-        <div class="field"><label>Minutes completed</label><input type="number" inputmode="numeric" data-res="${esc(b.id)}:minutesDone" value="${b.result.minutesDone ?? ''}" placeholder="${b.minutes}"></div>
+        <div class="field"><label>Minutes completed</label><input type="number" inputmode="numeric" data-res="${esc(b.id)}:minutesDone" value="${b.result.minutesDone ?? ''}" placeholder="${b.minutes}" ${dis}></div>
       </div>`;
   }
 
@@ -726,20 +731,21 @@ function shortName(n) {
   return n.length > 15 ? `${n.slice(0, 14)}…` : n;
 }
 
-function setRows(sets, blockId, _r, ex, unit) {
+function setRows(sets, blockId, _r, ex, unit, done = false) {
   const bwLoaded = ex && isBodyweightLoaded(ex);
   const showsW = ex && (ex.track === 'weight_reps' || bwLoaded);
   const showsT = ex && ex.track === 'time';
   const showsD = ex && ex.track === 'distance';
+  const dis = done ? 'disabled' : '';
   return `<div class="set-row head log"><span></span>${showsW ? `<span>${bwLoaded ? 'Added weight' : 'Weight'}</span>` : ''}<span>${showsT ? 'Secs' : showsD ? 'Metres' : 'Reps'}</span><span></span></div>`
     + sets.map((s, i) => `
       <div class="set-row log">
         <span class="sr-n">${i + 1}</span>
-        ${showsW ? `<input type="number" inputmode="decimal" data-set="${esc(blockId)}:${i}" data-f="weight" value="${s.weight ?? ''}" placeholder="${bwLoaded ? `+${unit}` : unit}">` : ''}
-        ${showsT ? `<input type="number" inputmode="numeric" data-set="${esc(blockId)}:${i}" data-f="seconds" value="${s.seconds ?? ''}" placeholder="secs">`
-    : showsD ? `<input type="number" inputmode="numeric" data-set="${esc(blockId)}:${i}" data-f="distance" value="${s.distance ?? ''}" placeholder="m">`
-      : `<input type="number" inputmode="numeric" data-set="${esc(blockId)}:${i}" data-f="reps" value="${s.reps ?? ''}" placeholder="reps">`}
-        <button class="tick ${s.done ? 'on' : ''}" data-tick="${esc(blockId)}:${i}" aria-label="Done">${icon('check', 19)}</button>
+        ${showsW ? `<input type="number" inputmode="decimal" data-set="${esc(blockId)}:${i}" data-f="weight" value="${s.weight ?? ''}" placeholder="${bwLoaded ? `+${unit}` : unit}" ${dis}>` : ''}
+        ${showsT ? `<input type="number" inputmode="numeric" data-set="${esc(blockId)}:${i}" data-f="seconds" value="${s.seconds ?? ''}" placeholder="secs" ${dis}>`
+    : showsD ? `<input type="number" inputmode="numeric" data-set="${esc(blockId)}:${i}" data-f="distance" value="${s.distance ?? ''}" placeholder="m" ${dis}>`
+      : `<input type="number" inputmode="numeric" data-set="${esc(blockId)}:${i}" data-f="reps" value="${s.reps ?? ''}" placeholder="reps" ${dis}>`}
+        <button class="tick ${s.done ? 'on' : ''}" data-tick="${esc(blockId)}:${i}" aria-label="Done" ${dis}>${icon('check', 19)}</button>
       </div>`).join('');
 }
 

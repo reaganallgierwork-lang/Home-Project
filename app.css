@@ -471,6 +471,7 @@ a { color: var(--gold); }
   background: var(--card-2); border: 1px solid var(--line-2); color: var(--text);
 }
 .field input:focus, .field select:focus { outline: 1px solid var(--gold); outline-offset: 1px; border-color: var(--gold); }
+.field input:disabled { opacity: .65; -webkit-text-fill-color: var(--text); }
 .field .help { font-size: 11.5px; color: var(--faint); margin-top: 6px; line-height: 1.5; }
 
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -770,6 +771,11 @@ a { color: var(--gold); }
   font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums;
 }
 .set-row input:focus { outline: 1px solid var(--gold); outline-offset: 1px; border-color: var(--gold); }
+/* A finished workout's set rows render disabled rather than vanishing, so it
+   still reads as a normal set list while you scroll — just inert. iOS Safari
+   fades disabled input text almost to invisible by default, hence the
+   explicit fill colour below. */
+.set-row input:disabled { opacity: .65; -webkit-text-fill-color: var(--text); }
 .tick {
   width: 44px; height: 42px; flex: none; border-radius: 11px;
   border: 1.5px solid var(--line); background: var(--card-2);
@@ -779,6 +785,8 @@ a { color: var(--gold); }
 .tick.on { background: var(--gold-grad); border-color: transparent; color: #14100A; }
 .tick .ic { width: 19px; height: 19px; }
 .tick:active { transform: scale(.9); }
+.tick:disabled { opacity: .55; }
+.tick.on:disabled { opacity: .8; }
 
 .addset {
   width: 100%; margin-top: 10px; padding: 10px; border-radius: 10px;
