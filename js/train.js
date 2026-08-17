@@ -46,6 +46,15 @@ export function renderTrain(state) {
   return renderHome(state, unit);
 }
 
+/** Jump straight into a session's log view — used by History's calendar to
+    open "what did I do that day" from the day-detail sheet. Setting the
+    view here is enough; the caller switches to the Train tab right after,
+    which triggers the render that actually shows it. */
+export function openSession(sessionId) {
+  activeId = sessionId;
+  view = 'log';
+}
+
 /* ============================================================================
    HOME
    ========================================================================== */

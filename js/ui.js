@@ -23,7 +23,8 @@ import { TIERS, META_BADGES } from './config.js';
 import './metrics-habits.js';          // registers the habits metric source
 import './metrics-workouts.js';        // registers the training metric source
 import { renderAnalyze } from './analyze.js';
-import { renderTrain } from './train.js';
+import { renderTrain, openSession as openTrainSession } from './train.js';
+import { sessionVolume, sessionSetCount } from './workouts.js';
 import './metrics-weight.js';          // registers the body-weight metric source
 import { renderWeight, openBodyEntrySheet, openPhotoViewer } from './weight.js';
 import { icon, PICKER_ICONS, hasIcon } from './icons.js';
@@ -625,43 +626,113 @@ function renderHistory(state) {
   });
 }
 
-/** A day tapped on the History calendar: that day's score, and its weight
-    entry if there is one — with a one-tap jump into logging it if not. */
+/** What a habit row is worth showing next to its name in the day-detail
+    sheet — the same value a control on the Today screen would show, just
+    as plain text since nothing here is editable. */
+function habitStatusText(h, row) {
+  if (!row.logged) return 'Not logged';
+  if (h.type === 'scale' && h.inputStyle === 'counter') {
+    const unitTxt = h.unit ? ` ${h.unit}` : '';
+    return `${row.value || 0}${unitTxt} of ${h.max}${unitTxt}`;
+  }
+  if (h.type === 'scale') return `Rated ${row.value}/5`;
+  return row.success ? 'Done' : 'Not done';
+}
+
+/** A day tapped on the History calendar: what you accomplished — habits,
+    any workout, your weight entry if there is one — with one-tap jumps into
+    each so this doubles as a way back into the day itself. */
 function openDayDetail(state, dk) {
   const r = R.byDay[dk];
   const entry = state.bodyLog?.[dk] || null;
   const isFuture = dk > R.endDay;
   const unit = state.settings.weightUnit || 'lb';
 
-  const habitBit = r && r.rows.length
-    ? `<div class="hint" style="margin-bottom:14px">${round(r.total)} of ${round(r.pot)} points that day${r.complete ? ' — a clean sweep.' : ''}</div>`
-    : (isFuture ? '' : '<div class="hint" style="margin-bottom:14px">No habits logged this day.</div>');
-
-  const weightBit = entry ? `
-    <div class="day-weight">
-      ${entry.photo ? `<img class="wthumb" src="${entry.photo}" alt="" id="dayPhotoThumb" style="cursor:pointer">` : `<div class="wthumb placeholder">${icon('bodyweight', 20)}</div>`}
-      <div>
-        <div class="dw-num">${entry.weight != null ? `${entry.weight} ${esc(unit)}` : 'Photo only'}</div>
-        <div class="dw-sub">${entry.photo ? 'Tap the photo to view it full size' : 'No photo attached'}</div>
-      </div>
-    </div>
-    <button class="btn" id="dayEditWeight" style="margin-top:12px">Edit this entry</button>`
-    : (isFuture ? '' : `<button class="btn primary" id="dayLogWeight">${icon('bodyweight', 17)} Log weight for this day</button>`);
-
-  const close = modal(`
+  const close = modal(isFuture ? `
     <h3>${esc(store.dayLabel(dk, { weekday: 'long', month: 'long', day: 'numeric' }))}</h3>
-    ${habitBit}
-    ${weightBit}
-    <button class="btn ghost" id="dayClose" style="margin-top:14px">Close</button>`);
+    <div class="hint">This day hasn't happened yet.</div>
+    <button class="btn ghost" id="dayClose" style="margin-top:14px">Close</button>` : (() => {
+    const habitsById = Object.fromEntries(state.habits.map((h) => [h.id, h]));
+    const headline = r && r.rows.length
+      ? `${round(r.total)} of ${round(r.pot)} points${r.complete ? ' — a clean sweep.' : '.'}`
+      : 'No habits logged this day.';
+
+    const habitRows = (r?.rows || []).map((row) => {
+      const h = habitsById[row.habitId];
+      if (!h) return '';
+      return `
+        <div class="streak ${row.success ? 'hot' : ''}">
+          <div class="emoji">${glyph(h, 18)}</div>
+          <div class="body"><div class="name">${esc(h.name)}</div><div class="sub">${esc(habitStatusText(h, row))}</div></div>
+          <div class="count"><b style="font-size:18px">${round(row.earned)}</b><span>pts</span></div>
+        </div>`;
+    }).join('');
+
+    const sessions = (state.sessions || []).filter((s) => s.day === dk);
+    const sessionRows = sessions.map((s) => {
+      const vol = sessionVolume(state, s);
+      const sets = sessionSetCount(state, s);
+      return `
+        <div class="wcard" data-jumpsess="${esc(s.id)}">
+          <div class="wc-body">
+            <div class="wc-name">${esc(s.name)}</div>
+            <div class="wc-sub">${s.finishedAt ? 'Finished' : 'In progress'} · ${sets} ${sets === 1 ? 'set' : 'sets'}${vol ? ` · ${Math.round(vol).toLocaleString()} ${esc(unit)}` : ''}</div>
+          </div>
+          <span class="wc-chev">${icon('chevronRight', 18)}</span>
+        </div>`;
+    }).join('');
+
+    const weightBit = entry ? `
+      <div class="day-weight">
+        ${entry.photo ? `<img class="wthumb" src="${entry.photo}" alt="" id="dayPhotoThumb" style="cursor:pointer">` : `<div class="wthumb placeholder">${icon('bodyweight', 20)}</div>`}
+        <div>
+          <div class="dw-num">${entry.weight != null ? `${entry.weight} ${esc(unit)}` : 'Photo only'}</div>
+          <div class="dw-sub">${entry.photo ? 'Tap the photo to view it full size' : 'No photo attached'}</div>
+        </div>
+      </div>
+      <button class="btn" id="dayEditWeight" style="margin-top:10px">Edit this entry</button>`
+      : `<button class="btn" id="dayLogWeight">${icon('bodyweight', 17)} Log weight for this day</button>`;
+
+    return `
+      <h3>${esc(store.dayLabel(dk, { weekday: 'long', month: 'long', day: 'numeric' }))}</h3>
+      <div class="hint" style="margin-bottom:14px">${headline}</div>
+
+      ${habitRows ? `<div class="section-title" style="margin-top:0">Habits</div>${habitRows}` : ''}
+
+      <div class="section-title">Workout</div>
+      ${sessionRows || '<div class="hint" style="margin-bottom:10px">No workout logged this day.</div>'}
+
+      <div class="section-title">Weight</div>
+      ${weightBit}
+
+      <button class="btn primary" id="dayOpenLog" style="margin-top:16px">Open daily log for this day</button>
+      <button class="btn ghost" id="dayClose" style="margin-top:10px">Close</button>`;
+  })());
+
+  if (isFuture) { el('dayClose').onclick = close; return; }
 
   if (entry?.photo) el('dayPhotoThumb').onclick = () => openPhotoViewer(entry.photo);
-  const jumpToEntry = () => {
+  const jumpToWeight = () => {
     close();
     goToTab('body');
     openBodyEntrySheet(store.get(), dk, () => refresh());
   };
-  if (entry) el('dayEditWeight').onclick = jumpToEntry;
-  else if (el('dayLogWeight')) el('dayLogWeight').onclick = jumpToEntry;
+  if (entry) el('dayEditWeight').onclick = jumpToWeight;
+  else el('dayLogWeight').onclick = jumpToWeight;
+
+  document.querySelectorAll('.modal [data-jumpsess]').forEach((c) => {
+    c.onclick = () => {
+      close();
+      openTrainSession(c.dataset.jumpsess);
+      goToTab('train');
+    };
+  });
+
+  el('dayOpenLog').onclick = () => {
+    close();
+    viewDay = dk;
+    goToTab('today');
+  };
   el('dayClose').onclick = close;
 }
 

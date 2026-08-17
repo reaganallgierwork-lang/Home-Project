@@ -306,9 +306,14 @@ never silently drops data or pretends a save worked when it didn't.
 ### On the calendar
 
 Every day you've weighed in gets a small gold dot on the **History** tab's
-calendar; a dot with a halo means that day also has a photo. Tap any day to
-see its score and its weight entry together, with a one-tap **Log weight for
-this day** if there isn't one yet, or **Edit this entry** if there is.
+calendar; a dot with a halo means that day also has a photo. Tap any day
+(weighed in or not) to open a full rundown of it: every habit and how it
+went, any workout logged that day — tap it to open that session, locked
+if it's finished — and your weight entry, with a one-tap **Log weight for
+this day** if there isn't one yet or **Edit this entry** if there is.
+**Open daily log for this day** at the bottom jumps straight into the Log
+tab for that date, so the calendar doubles as a way back into any day, not
+just a scoreboard for it.
 
 ### On the Data tab
 
