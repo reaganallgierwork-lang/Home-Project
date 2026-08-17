@@ -26,7 +26,9 @@ import { renderAnalyze } from './analyze.js';
 import { renderTrain, openSession as openTrainSession } from './train.js';
 import { sessionVolume, sessionSetCount, invalidateRecords } from './workouts.js';
 import './metrics-weight.js';          // registers the body-weight metric source
-import { renderWeight, openBodyEntrySheet, openPhotoViewer } from './weight.js';
+import { renderWeight, openBodyEntrySheet, openPhotoViewer, showNutritionSection } from './weight.js';
+import './metrics-nutrition.js';       // registers the nutrition metric source
+import { openFoodEntrySheet } from './nutrition.js';
 import { icon, PICKER_ICONS, hasIcon } from './icons.js';
 import { openSheet as modal } from './sheet.js';
 import { el, esc, toast } from './dom.js';
@@ -212,7 +214,25 @@ function renderToday(state) {
        full-width row underneath — the rating buttons, or a +/- counter for
        things like counting cups of water toward a goal. */
     let control;
-    if (h.type === 'scale' && h.inputStyle === 'counter') {
+    if (h.type === 'scale' && h.inputStyle === 'counter' && h.nutritionLink) {
+      /* A linked counter is entirely derived from the Nutrition section —
+         see nutrition.js's syncNutritionLinks(). Tapping it here would just
+         get silently overwritten the next time a meal is logged, so the
+         +/- and "Enter an amount" are replaced with a plain readout and a
+         jump straight to where the real editing happens. */
+      const amt = row.value;
+      const unitTxt = h.unit ? ` ${esc(h.unit)}` : '';
+      control = `
+        <div class="counter locked" data-habit="${h.id}">
+          <button class="ctr-btn minus" disabled aria-hidden="true">${icon('minus', 18)}</button>
+          <div class="fill">
+            <div class="lbl"><b>${amt == null ? '—' : amt}${amt == null ? '' : unitTxt}</b><span>of ${h.max}${unitTxt}</span></div>
+            <div class="bar ${row.success ? 'good' : ''}"><i style="width:${(Math.min(1, (amt || 0) / h.max) * 100).toFixed(1)}%"></i></div>
+          </div>
+          <button class="ctr-btn plus" disabled aria-hidden="true">${icon('plus', 18)}</button>
+        </div>
+        <button type="button" class="addset ctr-food" data-habit="${h.id}">${icon('utensils', 12)} Log food to fill this in</button>`;
+    } else if (h.type === 'scale' && h.inputStyle === 'counter') {
       const amt = row.value || 0;
       const cups = Math.round(amt / (h.step || 1));
       const stepWord = h.stepLabel || 'tap';
@@ -312,6 +332,14 @@ function renderToday(state) {
   });
   document.querySelectorAll('#screen-today .ctr-enter').forEach((b) => {
     b.onclick = () => openCounterEntrySheet(b.dataset.habit);
+  });
+  document.querySelectorAll('#screen-today .ctr-food').forEach((b) => {
+    b.onclick = () => {
+      const day = viewDay;
+      showNutritionSection();
+      goToTab('body');
+      openFoodEntrySheet(store.get(), day, null, refresh);
+    };
   });
 }
 
@@ -763,6 +791,21 @@ function openDayDetail(state, dk) {
       <button class="btn" id="dayEditWeight" style="margin-top:10px">Edit this entry</button>`
       : `<button class="btn" id="dayLogWeight">${icon('bodyweight', 17)} Log weight for this day</button>`;
 
+    const foodEntries = state.nutritionLog?.[dk] || [];
+    const foodRows = foodEntries.map((e) => `
+      <div class="wcard" data-jumpfood="${esc(e.id)}">
+        <div class="wc-body">
+          <div class="wc-name">${esc(e.name)}</div>
+          <div class="wc-sub">${[
+    e.calories != null ? `${Math.round(e.calories)} kcal` : '',
+    e.protein != null ? `${Math.round(e.protein)}g protein` : '',
+    e.carbs != null ? `${Math.round(e.carbs)}g carbs` : '',
+    e.fat != null ? `${Math.round(e.fat)}g fat` : '',
+  ].filter(Boolean).join(' · ') || 'No macros logged'}</div>
+        </div>
+        <span class="wc-chev">${icon('chevronRight', 18)}</span>
+      </div>`).join('');
+
     return `
       <h3>${esc(store.dayLabel(dk, { weekday: 'long', month: 'long', day: 'numeric' }))}</h3>
       <div class="hint" style="margin-bottom:14px">${headline}</div>
@@ -774,6 +817,10 @@ function openDayDetail(state, dk) {
 
       <div class="section-title">Weight</div>
       ${weightBit}
+
+      <div class="section-title">Nutrition</div>
+      ${foodRows || '<div class="hint" style="margin-bottom:10px">Nothing logged this day.</div>'}
+      <button class="btn" id="dayLogFood" style="margin-top:${foodRows ? '0' : '10px'}">${icon('utensils', 17)} Log food for this day</button>
 
       <button class="btn primary" id="dayOpenLog" style="margin-top:16px">Open daily log for this day</button>
       <button class="btn ghost" id="dayClose" style="margin-top:10px">Close</button>`;
@@ -797,6 +844,22 @@ function openDayDetail(state, dk) {
       goToTab('train');
     };
   });
+
+  document.querySelectorAll('.modal [data-jumpfood]').forEach((c) => {
+    c.onclick = () => {
+      const foodEntry = (state.nutritionLog?.[dk] || []).find((x) => x.id === c.dataset.jumpfood);
+      close();
+      showNutritionSection();
+      goToTab('body');
+      openFoodEntrySheet(store.get(), dk, foodEntry, () => refresh());
+    };
+  });
+  el('dayLogFood').onclick = () => {
+    close();
+    showNutritionSection();
+    goToTab('body');
+    openFoodEntrySheet(store.get(), dk, null, () => refresh());
+  };
 
   el('dayOpenLog').onclick = () => {
     close();
@@ -1035,6 +1098,17 @@ function editHabit(id) {
         <input type="number" id="hCounterThreshold" min="1" value="${h?.threshold ?? h?.max ?? 150}">
         <div class="help">Usually the same as the goal — reaching it is what keeps the streak alive. Points still scale smoothly below that, one tap at a time.</div>
       </div>
+      <div class="field">
+        <label>Fill this in automatically from</label>
+        <select id="hNutritionLink">
+          <option value="" ${!h?.nutritionLink ? 'selected' : ''}>Nothing — tap it by hand</option>
+          <option value="calories" ${h?.nutritionLink === 'calories' ? 'selected' : ''}>Calories logged on the Body tab</option>
+          <option value="protein" ${h?.nutritionLink === 'protein' ? 'selected' : ''}>Protein logged on the Body tab</option>
+          <option value="carbs" ${h?.nutritionLink === 'carbs' ? 'selected' : ''}>Carbs logged on the Body tab</option>
+          <option value="fat" ${h?.nutritionLink === 'fat' ? 'selected' : ''}>Fat logged on the Body tab</option>
+        </select>
+        <div class="help">Linking it hands the counter over to your food log — logging a meal on the Body tab's Nutrition section fills this in, and the +/− here turn off.</div>
+      </div>
     </div>
     <button class="btn primary" id="saveHabit">${h ? 'Save changes' : 'Add habit'}</button>
     ${h ? `
@@ -1065,10 +1139,10 @@ function editHabit(id) {
       weight: Math.max(1, Math.min(40, +el('hWeight').value || 10)),
     };
     if (k === 'binary') {
-      Object.assign(patch, { type: 'binary', inputStyle: 'rating' });
+      Object.assign(patch, { type: 'binary', inputStyle: 'rating', nutritionLink: null });
     } else if (k === 'rating') {
       Object.assign(patch, {
-        type: 'scale', inputStyle: 'rating', max: 5, step: 1, unit: '', stepLabel: '',
+        type: 'scale', inputStyle: 'rating', max: 5, step: 1, unit: '', stepLabel: '', nutritionLink: null,
         threshold: Math.max(1, Math.min(5, +el('hThreshold').value || 3)),
       });
     } else {
@@ -1080,6 +1154,7 @@ function editHabit(id) {
         unit: el('hUnit').value.trim(),
         stepLabel: el('hStepLabel').value.trim() || 'tap',
         threshold: Math.max(1, Math.min(goal, +el('hCounterThreshold').value || goal)),
+        nutritionLink: el('hNutritionLink').value || null,
       });
     }
     if (h) store.updateHabit(h.id, patch); else store.addHabit(patch);

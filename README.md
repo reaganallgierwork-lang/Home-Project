@@ -220,6 +220,14 @@ Tap the **gear** in the top right of the log screen. From there you can:
   you never get retroactive misses.
 - **Change any weight** with a slider. It shows you live what each habit is
   worth per day.
+- **Link a counter habit to your food log.** A counter habit (see below) has a
+  **Fill this in automatically from** dropdown — Calories, Protein, Carbs, or
+  Fat. Linking it hands the counter over entirely to whatever you log on the
+  Body tab's Nutrition section: the +/− and the manual entry field turn off,
+  and the number fills itself in from that day's food. This is opt-in and
+  per-habit — nothing links itself automatically, so if you want your existing
+  "Protein target" habit to track your actual food log instead of manual taps,
+  come here and set it.
 - **Retire a habit** — it stops counting from today but every past day keeps the
   score it already had. This is almost always what you want instead of deleting.
 - **Change the daily pot, the escalation rate, the recovery window, and the
@@ -344,6 +352,44 @@ its min/max over a bucket. A day you didn't weigh in is left out of the
 average rather than counted as a 0, the same honesty rule the Data tab uses
 for sleep ratings.
 
+### Nutrition
+
+A **Weight / Nutrition** switch at the top of the Body tab swaps the whole
+tab over to your food log — it's a section of Body, not a separate tab, so
+the tab bar stays at seven.
+
+**Log food** opens a sheet for one item: a name, a date (defaults to today,
+backdatable like everything else), and calories/protein/carbs/fat. Any field
+you skip is left **unknown, not zero** — if you only tracked calories for a
+snack, its protein just isn't counted toward the day's protein total, the
+same way an unlogged day isn't counted as a zero anywhere else in the app.
+Today's four macro tiles show a dash until you've logged at least one thing
+today; after that, each tile is the real sum for the day, including an
+honest 0 if you logged food but never entered a value for that particular
+nutrient.
+
+**Frequent meals** — tick "Save this as a frequent meal" while logging
+something you eat often, and it shows up as a one-tap shortcut next to the
+day's tiles. Tapping it opens the entry sheet pre-filled with that meal's
+macros so you can log it for today (or adjust it first) without retyping
+anything; the **✕** on it forgets the shortcut without touching any day you
+already logged with it.
+
+Every entry from the last 30 days also shows up in a flat **Recent** list
+underneath, and tapping one opens it for editing or deleting. The same food
+log for a specific day is also reachable from that day's entry in the
+**History** calendar, right alongside its habits, workout, and weight.
+
+**Feeding into a goal.** Link a counter habit — like a protein or calorie
+target — to one of the four nutrients from the habit editor (see
+*Changing things without touching code*, above). Once linked, that habit's
+counter is entirely computed from what you log here: eat something with 40g
+of protein and a linked "Protein target" habit jumps straight to 40, no
+tapping required. It's the same **no ceiling** rule as any other counter —
+logging past your goal keeps counting, it doesn't clamp at the top — and
+it's opt-in per habit, so nothing you already track changes behavior until
+you explicitly link it.
+
 ---
 
 ## The Data tab
@@ -368,7 +414,12 @@ time or rounds. That's the long game: pick "Bench Press → Estimated 1RM", set
 the range to **All time**, and watch it climb over the years.
 
 Your body weight log gets a group too, right alongside habits and lifts — same
-chart, same date-range picker, same table columns.
+chart, same date-range picker, same table columns. Nutrition gets the same
+treatment — calories, protein, carbs and fat each chart on their own, plus a
+"meals logged" count column in the table view — and a day with no food logged
+is left out of the average, same as everywhere else; a day that logged food
+but never touched a particular nutrient is counted as a real 0 for it, not
+skipped.
 
 Choose a window (7 days to all time), and the chart buckets it sensibly — by
 day for short windows, by week or month for long ones, and you can override

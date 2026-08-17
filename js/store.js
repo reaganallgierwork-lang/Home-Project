@@ -94,6 +94,12 @@ function freshState() {
       unit: h.unit ?? '',
       stepLabel: h.stepLabel ?? '',
       inputStyle: h.inputStyle === 'counter' ? 'counter' : 'rating',
+      /* A counter habit can be wired to auto-fill from a nutrient logged on
+         the Body tab's Nutrition section — 'calories'|'protein'|'carbs'|
+         'fat', or null for an ordinary hand-tapped counter. None of the
+         starter habits opt into this; it's a per-habit choice you make in
+         the habit editor. */
+      nutritionLink: null,
       archived: false,
       archivedAt: null,
       /* Habits don't count against you before they existed. Starting everyone
@@ -124,8 +130,23 @@ function freshState() {
        never converts it, so switch the unit before you start rather than
        partway through. */
     bodyLog: {},
+
+    /* ---- nutrition ----
+       nutritionLog['2026-08-16'] = [{ id, name, calories, protein, carbs,
+         fat, mealId, loggedAt }, ...] — a day can have any number of food
+       entries, unlike bodyLog's one-per-day. Every nutrient field is
+       independently optional: logging "just calories" or "just protein" is
+       fine, a missing field means it wasn't recorded, not zero.
+       meals = saved food shapes for one-tap reuse ("frequent meals"),
+       the same relationship templates has to sessions in workouts.js. */
+    nutritionLog: {},
+    meals: [],
   };
 }
+
+/** The four nutrients this app understands. A habit can be wired to auto-fill
+    from any one of them — see syncNutritionLinks() below. */
+export const NUTRIENT_FIELDS = ['calories', 'protein', 'carbs', 'fat'];
 
 /* ---------------------------------------------------------------- safety --
 
@@ -162,6 +183,10 @@ const str = (v, fallback = '', max = 200) => {
 /** Coerce to a finite number, or fall back. Rejects "12\" onmouseover=..." */
 const nOr = (v, fallback) => (Number.isFinite(+v) && v !== '' && v !== null ? +v : fallback);
 
+/** A nutrient amount from an untrusted file: a real number, floored at 0, or
+    null if absent/garbage — negative food isn't a thing. */
+const nOrPositive = (v) => (nOr(v, null) === null ? null : Math.max(0, +v));
+
 /** Fill in anything a older/partial save is missing, so upgrades never crash. */
 function normalise(raw) {
   const base = freshState();
@@ -184,6 +209,8 @@ function normalise(raw) {
     sessions: Array.isArray(raw.sessions) ? raw.sessions : [],
 
     bodyLog: raw.bodyLog && typeof raw.bodyLog === 'object' ? raw.bodyLog : {},
+    nutritionLog: raw.nutritionLog && typeof raw.nutritionLog === 'object' ? raw.nutritionLog : {},
+    meals: Array.isArray(raw.meals) ? raw.meals : [],
   };
 
   /* Sanitise every entry rather than trusting the file — a hand-edited or
@@ -202,24 +229,64 @@ function normalise(raw) {
     else s.bodyLog[day] = { weight, photo };
   });
 
+  /* Food entries: same untrusted-input rules as bodyLog above, but keyed to
+     an ARRAY per day rather than one entry — a day can have any number of
+     meals logged. Every nutrient field is independently optional (nOr with
+     a null fallback), matching that logging "just calories" is legitimate. */
+  Object.keys(s.nutritionLog).forEach((day) => {
+    const list = s.nutritionLog[day];
+    if (!DAY_RE.test(day) || !Array.isArray(list)) { delete s.nutritionLog[day]; return; }
+    const clean = list.filter((e) => e && typeof e === 'object').map((e) => ({
+      id: str(e.id, newId(), 64),
+      name: str(e.name, 'Food', 120),
+      calories: nOrPositive(e.calories),
+      protein: nOrPositive(e.protein),
+      carbs: nOrPositive(e.carbs),
+      fat: nOrPositive(e.fat),
+      mealId: e.mealId ? str(e.mealId, '', 64) : null,
+      loggedAt: Number.isFinite(+e.loggedAt) ? +e.loggedAt : Date.now(),
+    }));
+    if (!clean.length) delete s.nutritionLog[day];
+    else s.nutritionLog[day] = clean;
+  });
+  s.meals = s.meals.filter((m) => m && typeof m === 'object').map((m) => ({
+    id: str(m.id, newId(), 64),
+    name: str(m.name, 'Meal', 120),
+    calories: nOrPositive(m.calories),
+    protein: nOrPositive(m.protein),
+    carbs: nOrPositive(m.carbs),
+    fat: nOrPositive(m.fat),
+    createdAt: Number.isFinite(+m.createdAt) ? +m.createdAt : Date.now(),
+  }));
+
   /* Habits arrive straight from the file and are rendered into both text and
      HTML attributes, so every field the UI reads is coerced to its expected
-     shape here rather than trusted. */
+     shape here rather than trusted. (Previously two separate sanitising
+     passes ran back to back — the second, non-spreading one silently
+     dropped any field only the first pass had touched. Consolidated into
+     one so adding nutritionLink below can't repeat that mistake.) */
   s.habits = s.habits.filter((h) => h && typeof h === 'object').map((h) => ({
-    ...h,
     id: str(h.id, newId(), 64),
     name: str(h.name, 'Untitled', 120),
+    icon: str(h.icon, '', 64),
+    /* `emoji` only survives for saves made before the icon set existed, and
+       is migrated to an icon below. */
+    emoji: str(h.emoji, '', 16),
     unit: str(h.unit, '', 24),
     stepLabel: str(h.stepLabel, '', 24),
-    icon: str(h.icon, '', 64),
-    emoji: str(h.emoji, '', 16),
     type: h.type === 'scale' ? 'scale' : 'binary',
     inputStyle: h.inputStyle === 'counter' ? 'counter' : 'rating',
-    weight: nOr(h.weight, 10),
-    max: nOr(h.max, 5),
-    step: nOr(h.step, 1),
-    threshold: nOr(h.threshold, 3),
+    /* Which nutrient (if any) fills this counter in automatically from the
+       Nutrition section. Anything else collapses to "not linked" rather
+       than being trusted as a fourth, unlisted nutrient. */
+    nutritionLink: NUTRIENT_FIELDS.includes(h.nutritionLink) ? h.nutritionLink : null,
+    weight: Math.max(1, nOr(h.weight, 10)),
+    max: Math.max(1, nOr(h.max, 5)),
+    step: Math.max(0.01, nOr(h.step, 1)),
+    threshold: Math.max(1, nOr(h.threshold, 3)),
     archived: !!h.archived,
+    archivedAt: DAY_RE.test(h.archivedAt) ? h.archivedAt : null,
+    createdAt: DAY_RE.test(h.createdAt) ? h.createdAt : todayKey(),
   }));
 
   s.exercises = s.exercises.map((e) => ({
@@ -252,25 +319,6 @@ function normalise(raw) {
       blocks: x.blocks,
       createdAt: x.createdAt || Date.now(),
     }));
-  s.habits = s.habits.map((h) => ({
-    id: h.id || newId(),
-    name: String(h.name ?? 'Untitled'),
-    /* `icon` is a key from icons.js. `emoji` only survives for saves made
-       before the icon set existed, and is migrated below. */
-    icon: h.icon || '',
-    emoji: h.emoji || '',
-    type: h.type === 'scale' ? 'scale' : 'binary',
-    weight: Number.isFinite(+h.weight) && +h.weight > 0 ? +h.weight : 10,
-    threshold: Number.isFinite(+h.threshold) ? +h.threshold : 3,
-    max: Number.isFinite(+h.max) && +h.max > 1 ? +h.max : 5,
-    step: Number.isFinite(+h.step) && +h.step > 0 ? +h.step : 1,
-    unit: typeof h.unit === 'string' ? h.unit : '',
-    stepLabel: typeof h.stepLabel === 'string' ? h.stepLabel : '',
-    inputStyle: h.inputStyle === 'counter' ? 'counter' : 'rating',
-    archived: !!h.archived,
-    archivedAt: h.archivedAt || null,
-    createdAt: h.createdAt || todayKey(),
-  }));
   /* Percentages must be ascending for the ladder to make sense. */
   s.settings.tierPercents = (s.settings.tierPercents || DEFAULTS.tierPercents)
     .map(Number).filter(Number.isFinite).sort((a, b) => a - b);
@@ -387,6 +435,7 @@ export function addHabit(partial) {
     unit: partial.unit || '',
     stepLabel: partial.stepLabel || '',
     inputStyle: partial.inputStyle === 'counter' ? 'counter' : 'rating',
+    nutritionLink: NUTRIENT_FIELDS.includes(partial.nutritionLink) ? partial.nutritionLink : null,
     archived: false,
     archivedAt: null,
     /* Starts counting from today. A habit you add on the 20th can never give
@@ -553,6 +602,119 @@ export function setBodyEntry(day, patch) {
 
 export function deleteBodyEntry(day) {
   update((s) => { delete s.bodyLog[day]; });
+}
+
+/* ---------- nutrition: food entries, frequent meals, habit linking ----------
+
+   The habit-linking is the interesting part. A counter habit with
+   h.nutritionLink set (e.g. 'protein') is meant to be entirely DERIVED from
+   the Nutrition section rather than hand-tapped — see the locked counter UI
+   in ui.js. syncNutritionLinks() is what keeps that promise: every food-log
+   mutation recomputes the day's nutrient totals and pushes them straight
+   into log[day][habitId] for every habit linked to that nutrient, through
+   the exact same setEntry() semantics everything else uses (so streaks,
+   scoring and the Data tab all see it as a completely ordinary logged
+   value — nothing downstream needs to know it came from food logging).
+
+   A day with no food entries clears linked habits back to "not logged"
+   rather than a fabricated 0 — the same rule setEntry() already follows: an
+   unlogged day isn't evidence of a bad day, it's evidence of nothing.
+   ---------------------------------------------------------------------- */
+
+function syncNutritionLinks(s, day) {
+  const entries = s.nutritionLog[day] || [];
+  const totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+  entries.forEach((e) => {
+    NUTRIENT_FIELDS.forEach((f) => { totals[f] += e[f] || 0; });
+  });
+  s.habits.forEach((h) => {
+    if (!NUTRIENT_FIELDS.includes(h.nutritionLink)) return;
+    if (!entries.length) {
+      if (s.log[day]) delete s.log[day][h.id];
+    } else {
+      if (!s.log[day]) s.log[day] = {};
+      s.log[day][h.id] = totals[h.nutritionLink];
+    }
+    if (s.log[day] && !Object.keys(s.log[day]).length) delete s.log[day];
+  });
+}
+
+export function getNutritionDay(day) {
+  return get().nutritionLog[day] || [];
+}
+
+/** Today's (or any day's) nutrient totals — 0 for each field with no
+    entries, distinct from a linked habit's log value being null/absent for
+    a day with literally nothing logged (see syncNutritionLinks above). */
+export function nutritionTotals(day) {
+  const entries = get().nutritionLog[day] || [];
+  const totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+  entries.forEach((e) => NUTRIENT_FIELDS.forEach((f) => { totals[f] += e[f] || 0; }));
+  return totals;
+}
+
+function cleanNutrients(partial) {
+  const out = {};
+  NUTRIENT_FIELDS.forEach((f) => {
+    /* Negative food isn't a thing, and a stray negative would corrupt a
+       linked habit's counter (its bar-width math assumes amt >= 0). */
+    out[f] = (partial[f] === null || partial[f] === undefined || partial[f] === '') ? null
+      : (Number.isFinite(+partial[f]) ? Math.max(0, +partial[f]) : null);
+  });
+  return out;
+}
+
+export function logFoodEntry(day, partial) {
+  const e = {
+    id: newId(),
+    name: (partial.name || '').trim() || 'Food',
+    ...cleanNutrients(partial),
+    mealId: partial.mealId || null,
+    loggedAt: Date.now(),
+  };
+  update((s) => {
+    if (!s.nutritionLog[day]) s.nutritionLog[day] = [];
+    s.nutritionLog[day].push(e);
+    syncNutritionLinks(s, day);
+  });
+  return e;
+}
+
+export function updateFoodEntry(day, entryId, patch) {
+  update((s) => {
+    const e = (s.nutritionLog[day] || []).find((x) => x.id === entryId);
+    if (!e) return;
+    if ('name' in patch) e.name = (patch.name || '').trim() || 'Food';
+    Object.assign(e, cleanNutrients({ ...e, ...patch }));
+    syncNutritionLinks(s, day);
+  });
+}
+
+export function deleteFoodEntry(day, entryId) {
+  update((s) => {
+    if (!s.nutritionLog[day]) return;
+    s.nutritionLog[day] = s.nutritionLog[day].filter((x) => x.id !== entryId);
+    if (!s.nutritionLog[day].length) delete s.nutritionLog[day];
+    syncNutritionLinks(s, day);
+  });
+}
+
+/* ---- frequent meals: a saved food shape, for logging the same thing again
+   in two taps instead of retyping every field ---- */
+
+export function saveMeal(partial) {
+  const m = {
+    id: newId(),
+    name: (partial.name || '').trim() || 'Meal',
+    ...cleanNutrients(partial),
+    createdAt: Date.now(),
+  };
+  update((s) => s.meals.push(m));
+  return m;
+}
+
+export function deleteMeal(id) {
+  update((s) => { s.meals = s.meals.filter((m) => m.id !== id); });
 }
 
 /* ---------- backup ---------- */

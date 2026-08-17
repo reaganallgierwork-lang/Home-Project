@@ -334,6 +334,11 @@ a { color: var(--gold); }
    disabled-looking state. */
 .counter .ctr-btn.plus.maxed { border-color: rgba(212,175,55,.4); color: var(--gold); }
 .counter .ctr-btn .ic { width: 18px; height: 18px; }
+/* A counter linked to the food log: the +/- are genuinely inert (not just
+   styled that way), disabled the same way a finished workout's set fields
+   are — see the .set-row input:disabled comment for why the fill colour
+   needs restating here too. */
+.counter .ctr-btn:disabled { opacity: .35; -webkit-text-fill-color: var(--text); }
 .counter .fill { flex: 1; min-width: 0; }
 .counter .lbl { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--muted); margin-bottom: 5px; }
 .counter .lbl b { color: var(--text); font-size: 14px; font-weight: 700; }

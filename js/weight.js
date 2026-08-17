@@ -1,10 +1,16 @@
 /* ============================================================================
-   BODY — weight entries and optional progress photos.
+   BODY — weight entries, optional progress photos, and (as a second section
+   under the same tab) nutrition — see nutrition.js.
    ----------------------------------------------------------------------------
-   One entry per day: a weight, a photo, or both. Reachable two ways — from
-   this tab directly, or by tapping a day on the History calendar, which is
-   why the entry sheet and the photo viewer are exported rather than kept
+   One weight entry per day: a weight, a photo, or both. Reachable two ways —
+   from this tab directly, or by tapping a day on the History calendar, which
+   is why the entry sheet and the photo viewer are exported rather than kept
    private to this file.
+
+   Weight and Nutrition share one tab behind a small segmented toggle rather
+   than each getting its own — the same move made for Tiers+Badges (see
+   ui.js's SCREENS list) to keep the tab bar at seven. This file owns the
+   toggle and the screen shell; nutrition.js only ever fills in #bodyContent.
 
    This module never imports from ui.js. ui.js imports FROM here (same
    direction as train.js and analyze.js) so there is no import cycle — see
@@ -15,10 +21,20 @@ import * as store from './store.js';
 import { icon } from './icons.js';
 import { openSheet as sheet, lockScroll, unlockScroll } from './sheet.js';
 import { el, esc, toast } from './dom.js';
+import { renderNutritionContent } from './nutrition.js';
 
 const round1 = (n) => Math.round(n * 10) / 10;
 
 let redraw = () => {};
+let section = 'weight';
+
+/** Switch the Body tab to its Nutrition section — used by ui.js's "log food
+    to fill this in" jump from a linked counter habit, and by the History
+    day-detail sheet's nutrition jump. Only sets state; the caller switches
+    tabs right after, which triggers the render that actually shows it. */
+export function showNutritionSection() {
+  section = 'nutrition';
+}
 
 /* ============================================================================
    THE TAB
@@ -26,6 +42,23 @@ let redraw = () => {};
 
 export function renderWeight(state) {
   redraw = () => renderWeight(store.get());
+
+  const toggle = `
+    <div class="seg" id="bodySeg">
+      <button data-sec="weight" class="${section === 'weight' ? 'on' : ''}">Weight</button>
+      <button data-sec="nutrition" class="${section === 'nutrition' ? 'on' : ''}">Nutrition</button>
+    </div>`;
+
+  if (section === 'nutrition') {
+    el('screen-body').innerHTML = `
+      <div class="topbar"><h1>Body</h1></div>
+      ${toggle}
+      <div id="bodyContent"></div>`;
+    wireToggle();
+    renderNutritionContent(state, redraw);
+    return;
+  }
+
   const unit = state.settings.weightUnit || 'lb';
   const today = store.todayKey();
 
@@ -44,6 +77,7 @@ export function renderWeight(state) {
     <div class="topbar">
       <h1>Body<div class="sub">${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} logged</div></h1>
     </div>
+    ${toggle}
 
     <button class="btn primary big" id="logToday">
       ${icon('bodyweight', 18)} ${hasToday ? "Update today's weigh-in" : "Log today's weigh-in"}
@@ -68,9 +102,16 @@ export function renderWeight(state) {
         No entries yet. Log today's weight to start your trend — a photo is entirely optional.
       </div>`}`;
 
+  wireToggle();
   el('logToday').onclick = () => openBodyEntrySheet(store.get(), today, redraw);
   document.querySelectorAll('#screen-body [data-entry]').forEach((row) => {
     row.onclick = () => openBodyEntrySheet(store.get(), row.dataset.entry, redraw);
+  });
+}
+
+function wireToggle() {
+  document.querySelectorAll('#bodySeg button').forEach((b) => {
+    b.onclick = () => { section = b.dataset.sec; redraw(); };
   });
 }
 
