@@ -10,7 +10,7 @@
    every phone to throw away the old copy and pull the new one.
    ========================================================================== */
 
-const CACHE = 'ascent-v13';
+const CACHE = 'ascent-v14';
 
 const FILES = [
   './',
@@ -59,11 +59,19 @@ self.addEventListener('activate', (e) => {
 });
 
 /* Network first, cache as the safety net: you always get the newest version
-   when you have signal, and the app still opens when you don't. */
+   when you have signal, and the app still opens when you don't.
+
+   { cache: 'no-store' } is not optional here. A bare fetch(e.request) still
+   honours whatever Cache-Control header the server sent — and GitHub Pages
+   sends one — so it can be silently answered out of the browser's own disk
+   cache without ever reaching the network. That defeated "network first" in
+   practice: bumping the CACHE constant above only changes the offline
+   FALLBACK (the .catch() below), it does nothing to force this fetch to
+   actually leave the phone. no-store is what makes that guarantee real. */
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-store' })
       .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});

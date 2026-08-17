@@ -471,9 +471,31 @@ that's the whole point of the split.
 
 ### If your phone won't show the new version
 
-Open `sw.js` and change `habit-ladder-v1` to `habit-ladder-v2`. That tells every
-phone to throw away its cached copy. There's a comment in the file saying the
-same thing.
+Open `sw.js` and bump the number in `const CACHE = 'ascent-vN'`. There's a
+comment at the top of the file saying the same thing.
+
+Two different things have to update for a change to actually reach your
+phone, and it's worth knowing both:
+
+1. **GitHub deploys it.** Check the **Actions** tab — a green check means the
+   new files are live at your app's address. This can occasionally fail with
+   a transient error from GitHub's own Pages service (not your code); if a
+   run shows red, re-running that same job from the Actions tab is usually
+   all it takes.
+2. **Your phone actually re-fetches it.** This is the one that bites: the
+   service worker's fetch handler passes `{ cache: 'no-store' }` on every
+   request specifically so a stale response from the browser's own HTTP
+   cache can never masquerade as a fresh one — GitHub Pages sends caching
+   headers on everything it serves, and without that flag a "network first"
+   fetch can be quietly answered from the phone's local cache without ever
+   reaching GitHub at all. If you ever change that fetch handler, keep the
+   `no-store` — dropping it silently reintroduces this exact bug, and it's a
+   hard one to notice because everything still *looks* like it's fetching
+   fresh.
+
+If both of those are true and it's still stale, fully close the app (swipe
+it away, don't just background it) and reopen it with signal — that forces
+a real navigation rather than resuming whatever was already in memory.
 
 ### Running the tests
 
