@@ -78,76 +78,134 @@ export function closeAllSheets() {
 
 /* ----------------------------------------------------------------------------
    Swipe-to-dismiss: pull down from the top of the sheet's own scroll.
-   Pointer Events cover touch, pen and mouse in one API, which is also what
-   lets this be driven from a script (mouse events) for testing.
+   ----------------------------------------------------------------------------
+   This is driven by TOUCH events, not Pointer Events, and that is not a
+   stylistic choice — Pointer Events cannot do this job on a phone:
+
+     touchstart           cancelable: true
+     touchmove  (+16px)   cancelable: true   <- the only chance to claim it
+     pointercancel                           <- browser takes the gesture
+     touchmove  (+32px)   cancelable: false  <- too late, it is scrolling now
+
+   The moment the browser decides a touch gesture is a scroll it fires
+   pointercancel and stops sending pointermove, and preventDefault() on a
+   pointermove never stopped the scroll in the first place. So the decision
+   has to be made inside a non-passive touchmove handler, on the first move
+   that still reports cancelable — hence { passive: false } below, and the
+   deliberately small DECIDE_SLOP so we always decide before the browser's
+   own (larger) scroll threshold does.
+
+   Mouse drags go through a separate, much simpler path: no browser gesture
+   arbitration to race, so pointer events are fine there.
    -------------------------------------------------------------------------- */
 
+/* Movement (px) before a gesture is judged a pull-down rather than a scroll.
+   Must stay below the browser's own scroll slop (~5-8px) so we decide first. */
+const DECIDE_SLOP = 3;
+
 function wireSwipeToDismiss(panel, close) {
-  let active = false;   // currently tracking a possible dismiss drag
+  let atTop = false;    // was the sheet at its own scroll top when this began
+  let decided = false;  // have we judged what this gesture is yet
+  let dragging = false; // ...and did it turn out to be a dismiss drag
   let startY = 0;
   let dy = 0;
   let prevY = 0;
   let prevT = 0;
   let velocity = 0;     // px/ms, positive = downward
 
-  const reset = () => {
-    active = false;
-    dy = 0;
-    velocity = 0;
+  const settle = () => {
     panel.style.transition = 'transform .22s cubic-bezier(.2,.9,.2,1), opacity .22s ease';
     panel.style.transform = '';
     panel.style.opacity = '';
   };
 
-  panel.addEventListener('pointerdown', (e) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    /* Only a candidate if the sheet is already scrolled to the very top —
-       otherwise this is an ordinary scroll and should behave like one. */
-    if (panel.scrollTop > 0) return;
-    active = true;
-    startY = e.clientY;
-    prevY = e.clientY;
-    prevT = e.timeStamp;
+  const begin = (y, t, target) => {
+    decided = false;
+    dragging = false;
     dy = 0;
     velocity = 0;
-    /* The entrance animation has "both" fill — without cancelling it here,
-       it keeps winning the cascade over the inline transform below and the
-       drag would visibly do nothing. */
-    panel.style.animation = 'none';
-    panel.style.transition = 'none';
-  });
+    startY = y;
+    prevY = y;
+    prevT = t;
+    /* Only a candidate if the sheet is already at its own scroll top —
+       anywhere else, a downward drag is an ordinary scroll and must stay
+       one. Controls that own their own drag (the weight sliders in
+       settings) are never a dismiss, however sloppy the gesture. */
+    atTop = panel.scrollTop <= 0 && !target?.closest?.('input[type=range]');
+  };
 
-  panel.addEventListener('pointermove', (e) => {
-    if (!active) return;
-    const y = e.clientY;
+  /** Returns true if the caller should preventDefault (we've taken over). */
+  const move = (y, t) => {
+    if (!atTop) return false;
     dy = y - startY;
-    /* Swiping back up, or having scrolled past the top mid-gesture, hands
-       control straight back to the browser's normal scrolling. */
-    if (dy <= 0 || panel.scrollTop > 0) { reset(); return; }
-    e.preventDefault();
-    const dt = Math.max(1, e.timeStamp - prevT);
+
+    if (!decided) {
+      if (Math.abs(dy) < DECIDE_SLOP) return false;
+      decided = true;
+      dragging = dy > 0 && panel.scrollTop <= 0;
+      if (!dragging) { atTop = false; return false; }
+      /* The entrance animation has "both" fill — without cancelling it the
+         keyframed transform keeps beating the inline one set below and the
+         drag would visibly do nothing. */
+      panel.style.animation = 'none';
+      panel.style.transition = 'none';
+    }
+    if (!dragging) return false;
+
+    const dt = Math.max(1, t - prevT);
     velocity = (y - prevY) / dt;
     prevY = y;
-    prevT = e.timeStamp;
+    prevT = t;
+
+    /* Pulled back above where it started: sit at rest but stay in the
+       gesture, so carrying on downward again picks straight back up. */
+    const shown = Math.max(0, dy);
     /* Resistance past the first ~140px so it never feels like the sheet is
        about to fly off screen before you've decided to let go. */
-    const eased = dy < 140 ? dy : 140 + (dy - 140) * 0.25;
+    const eased = shown < 140 ? shown : 140 + (shown - 140) * 0.25;
     panel.style.transform = `translateY(${eased}px)`;
     panel.style.opacity = String(Math.max(0.5, 1 - eased / 400));
-  });
+    return true;
+  };
 
-  const finish = () => {
-    if (!active) return;
-    active = false;
+  const end = () => {
+    if (!dragging) { atTop = false; return; }
+    dragging = false;
+    atTop = false;
     if (dy > DISMISS_DISTANCE || velocity > DISMISS_VELOCITY) {
       panel.style.transition = 'transform .18s ease-in, opacity .18s ease-in';
       panel.style.transform = 'translateY(100%)';
       panel.style.opacity = '0';
       setTimeout(close, 160);
     } else {
-      reset();
+      settle();
     }
   };
-  panel.addEventListener('pointerup', finish);
-  panel.addEventListener('pointercancel', reset);
+
+  /* ---- touch: the path that actually runs on the phone ---- */
+  panel.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) { atTop = false; return; }
+    begin(e.touches[0].clientY, e.timeStamp, e.target);
+  }, { passive: true });
+
+  panel.addEventListener('touchmove', (e) => {
+    if (e.touches.length !== 1) return;
+    /* Non-passive on purpose: preventDefault here is the whole mechanism —
+       it stops the browser turning this into a scroll and cancelling us. */
+    if (move(e.touches[0].clientY, e.timeStamp) && e.cancelable) e.preventDefault();
+  }, { passive: false });
+
+  panel.addEventListener('touchend', end);
+  panel.addEventListener('touchcancel', () => { dragging = false; atTop = false; settle(); });
+
+  /* ---- mouse: no gesture arbitration to race, so this stays simple ---- */
+  panel.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    begin(e.clientY, e.timeStamp, e.target);
+  });
+  panel.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    if (move(e.clientY, e.timeStamp)) e.preventDefault();
+  });
+  panel.addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse') end(); });
 }
