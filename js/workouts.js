@@ -105,6 +105,37 @@ export function exerciseName(state, id) {
   return exerciseById(state, id)?.name || 'Unknown exercise';
 }
 
+/* -------------------------------------------------------- bodyweight loads -
+
+   A "bodyweight-loaded" exercise is one where your body is the resistance —
+   pull-ups, push-ups, dips, burpees, air squats, and so on. Any exercise
+   filed under the Bodyweight category and tracked by reps qualifies
+   automatically, so a custom exercise added later (a pistol squat, say)
+   picks this up with no extra step — nothing here is a hardcoded name list.
+   Bodyweight exercises tracked by time (a plank hold) don't qualify: nothing
+   downstream multiplies weight by reps for them, so there'd be nothing to
+   apply it to.
+
+   Weight entered against one of these isn't the load — it's what's added ON
+   TOP of your bodyweight (a dip belt, a weighted vest). A blank or zero
+   entry means bodyweight alone. blockRecords() below is where that turns
+   into an actual number.
+   ------------------------------------------------------------------------- */
+
+export function isBodyweightLoaded(ex) {
+  return !!ex && ex.category === 'Bodyweight' && ex.track === 'reps';
+}
+
+/** The bodyweight to credit for a given day: that day's own weigh-in, or
+    failing that, the most recent one before it. Null if none has ever been
+    logged, in which case a bodyweight-loaded set is worth only whatever
+    supplemental weight was entered (same as before this existed). */
+export function bodyWeightAsOf(state, day) {
+  const log = state.bodyLog || {};
+  const known = Object.keys(log).filter((d) => d <= day && log[d].weight != null).sort();
+  return known.length ? log[known[known.length - 1]].weight : null;
+}
+
 /* ----------------------------------------------------------- block shapes - */
 
 export const BLOCK_TYPES = [
@@ -225,16 +256,23 @@ export function fillEqualSets(count, template) {
                so estimated-max metrics ignore these.
    ------------------------------------------------------------------------- */
 
-export function blockRecords(block) {
+export function blockRecords(state, block, day) {
   const out = [];
   const push = (exerciseId, weight, reps, kind, extra = {}) => {
     if (!exerciseId) return;
     const r = Number(reps) || 0;
-    const w = Number(weight) || 0;
+    let w = Number(weight) || 0;
     const secs = Number(extra.seconds) || 0;
     const dist = Number(extra.distance) || 0;
     /* Nothing performed means nothing to record. */
     if (!r && !secs && !dist) return;
+    /* Bodyweight movements: whatever was typed is supplemental, stacked on
+       top of the bodyweight logged for this day (or the most recent weigh-in
+       before it). See the comment on isBodyweightLoaded() above. */
+    if (isBodyweightLoaded(exerciseById(state, exerciseId))) {
+      const bw = bodyWeightAsOf(state, day);
+      if (bw != null) w += bw;
+    }
     out.push({ exerciseId, weight: w, reps: r, seconds: secs, distance: dist, kind });
   };
 
@@ -299,10 +337,10 @@ export function blockRecords(block) {
 }
 
 /** Every performed set in a session, stamped with its day. */
-export function sessionRecords(session) {
+export function sessionRecords(state, session) {
   const out = [];
   (session.blocks || []).forEach((b) => {
-    blockRecords(b).forEach((r) => out.push({ ...r, day: session.day, sessionId: session.id }));
+    blockRecords(state, b, session.day).forEach((r) => out.push({ ...r, day: session.day, sessionId: session.id }));
   });
   return out;
 }
@@ -310,7 +348,7 @@ export function sessionRecords(session) {
 /** Every performed set, ever. The backbone of all workout metrics. */
 export function allRecords(state) {
   const out = [];
-  (state.sessions || []).forEach((s) => sessionRecords(s).forEach((r) => out.push(r)));
+  (state.sessions || []).forEach((s) => sessionRecords(state, s).forEach((r) => out.push(r)));
   return out;
 }
 
@@ -331,12 +369,12 @@ export function recordVolume(rec) {
   return (Number(rec.weight) || 0) * (Number(rec.reps) || 0);
 }
 
-export function sessionVolume(session) {
-  return sessionRecords(session).reduce((a, r) => a + recordVolume(r), 0);
+export function sessionVolume(state, session) {
+  return sessionRecords(state, session).reduce((a, r) => a + recordVolume(r), 0);
 }
 
-export function sessionSetCount(session) {
-  return sessionRecords(session).length;
+export function sessionSetCount(state, session) {
+  return sessionRecords(state, session).length;
 }
 
 /* ------------------------------------------------------------- formatting - */

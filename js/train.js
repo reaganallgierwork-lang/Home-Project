@@ -23,7 +23,7 @@ import {
   fillEqualSets, describeBlock, blockTitle, blockTypeInfo, exerciseById,
   exerciseName, sessionFromTemplate, templateFromSession, sessionVolume,
   sessionSetCount, sessionRecords, personalBests, fmtWeight,
-  fmtDuration, parseDuration, allRecords,
+  fmtDuration, parseDuration, allRecords, isBodyweightLoaded,
 } from './workouts.js';
 import { icon } from './icons.js';
 
@@ -87,12 +87,12 @@ function renderHome(state, unit) {
     ${recent.length ? `
       <div class="section-title">Recent</div>
       ${recent.map((s) => {
-    const vol = sessionVolume(s);
+    const vol = sessionVolume(state, s);
     return `
         <div class="wcard" data-sess="${esc(s.id)}">
           <div class="wc-body">
             <div class="wc-name">${esc(s.name)}</div>
-            <div class="wc-sub">${esc(store.dayLabel(s.day, { weekday: 'short', month: 'short', day: 'numeric' }))} · ${sessionSetCount(s)} sets${vol ? ` · ${Math.round(vol).toLocaleString()} ${unit}` : ''}</div>
+            <div class="wc-sub">${esc(store.dayLabel(s.day, { weekday: 'short', month: 'short', day: 'numeric' }))} · ${sessionSetCount(state, s)} sets${vol ? ` · ${Math.round(vol).toLocaleString()} ${unit}` : ''}</div>
           </div>
           <span class="wc-chev">${icon('chevronRight', 18)}</span>
         </div>`;
@@ -328,9 +328,12 @@ function configStraight(state, block, done, isNew) {
   let count = sets.length;
   let work = sets.map((s) => ({ ...s }));
 
-  const showsWeight = ex && (ex.track === 'weight_reps');
+  const bwLoaded = ex && isBodyweightLoaded(ex);
+  const showsWeight = ex && (ex.track === 'weight_reps' || bwLoaded);
   const showsTime = ex && ex.track === 'time';
   const showsDist = ex && ex.track === 'distance';
+  const weightLabel = bwLoaded ? 'Added weight' : 'Weight';
+  const weightPlaceholder = bwLoaded ? `+${unit}` : unit;
 
   const body = () => `
     <h3>${esc(ex ? ex.name : 'Exercise')}</h3>
@@ -351,6 +354,7 @@ function configStraight(state, block, done, isNew) {
     </div>
 
     <div id="setFields">${mode === 'equal' ? equalFields() : customFields()}</div>
+    ${bwLoaded ? '<div class="help">Counted on top of your logged bodyweight. Leave blank for bodyweight alone, or add what a belt or vest is carrying.</div>' : ''}
 
     <button class="btn primary" id="okBlock">${isNew ? 'Add to workout' : 'Save changes'}</button>
     <button class="btn ghost" id="cancelBlock">Cancel</button>`;
@@ -359,17 +363,17 @@ function configStraight(state, block, done, isNew) {
     if (showsTime) return `<input type="number" inputmode="numeric" data-f="seconds" data-i="${i}" value="${s.seconds ?? ''}" placeholder="secs">`;
     if (showsDist) return `<input type="number" inputmode="numeric" data-f="distance" data-i="${i}" value="${s.distance ?? ''}" placeholder="metres">`;
     return `
-      ${showsWeight ? `<input type="number" inputmode="decimal" data-f="weight" data-i="${i}" value="${s.weight ?? ''}" placeholder="${unit}">` : ''}
+      ${showsWeight ? `<input type="number" inputmode="decimal" data-f="weight" data-i="${i}" value="${s.weight ?? ''}" placeholder="${weightPlaceholder}">` : ''}
       <input type="number" inputmode="numeric" data-f="reps" data-i="${i}" value="${s.reps ?? ''}" placeholder="reps">`;
   };
 
   function equalFields() {
-    return `<div class="set-row head"><span></span>${showsWeight && !showsTime && !showsDist ? '<span>Weight</span>' : ''}<span>${showsTime ? 'Seconds' : showsDist ? 'Metres' : 'Reps'}</span></div>
+    return `<div class="set-row head"><span></span>${showsWeight && !showsTime && !showsDist ? `<span>${weightLabel}</span>` : ''}<span>${showsTime ? 'Seconds' : showsDist ? 'Metres' : 'Reps'}</span></div>
       <div class="set-row"><span class="sr-n">All</span>${fieldFor(work[0], 0)}</div>`;
   }
 
   function customFields() {
-    return `<div class="set-row head"><span></span>${showsWeight && !showsTime && !showsDist ? '<span>Weight</span>' : ''}<span>${showsTime ? 'Seconds' : showsDist ? 'Metres' : 'Reps'}</span></div>`
+    return `<div class="set-row head"><span></span>${showsWeight && !showsTime && !showsDist ? `<span>${weightLabel}</span>` : ''}<span>${showsTime ? 'Seconds' : showsDist ? 'Metres' : 'Reps'}</span></div>`
       + work.map((s, i) => `<div class="set-row"><span class="sr-n">${i + 1}</span>${fieldFor(s, i)}</div>`).join('');
   }
 
@@ -606,7 +610,7 @@ function renderLog(state, unit) {
       <button class="icon-btn" id="sessMenu" aria-label="More">${icon('more', 19)}</button>
     </div>
 
-    <div class="card tight totals" id="totals">${totalsHtml(session, unit)}</div>
+    <div class="card tight totals" id="totals">${totalsHtml(state, session, unit)}</div>
 
     ${session.blocks.map((b) => logBlock(state, b, unit)).join('')
       || `<div class="empty"><div class="big">${icon('layers', 34)}</div>Nothing in this workout yet.</div>`}
@@ -630,8 +634,8 @@ function renderLog(state, unit) {
   wireBlockCards(state, session.blocks, () => { store.saveSession(session); redraw(); });
 }
 
-function totalsHtml(session, unit) {
-  const recs = sessionRecords(session);
+function totalsHtml(state, session, unit) {
+  const recs = sessionRecords(state, session);
   const vol = recs.reduce((a, r) => a + (r.weight || 0) * (r.reps || 0), 0);
   /* "Sets" means sets you ticked off. A metcon contributes real reps and real
      volume, but calling its rounds "sets" would make the count disagree with
@@ -675,7 +679,7 @@ function logBlock(state, b, unit) {
     return `
               <div class="set-row log ss">
                 <span class="sr-n" title="${esc(exerciseName(state, it.exerciseId))}">${esc(shortName(exerciseName(state, it.exerciseId)))}</span>
-                ${ex && ex.track === 'weight_reps' ? `<input type="number" inputmode="decimal" data-ss="${esc(b.id)}:${ii}:${r}" data-f="weight" value="${s.weight ?? ''}" placeholder="${unit}">` : ''}
+                ${ex && (ex.track === 'weight_reps' || isBodyweightLoaded(ex)) ? `<input type="number" inputmode="decimal" data-ss="${esc(b.id)}:${ii}:${r}" data-f="weight" value="${s.weight ?? ''}" placeholder="${isBodyweightLoaded(ex) ? `+${unit}` : unit}">` : ''}
                 <input type="number" inputmode="numeric" data-ss="${esc(b.id)}:${ii}:${r}" data-f="reps" value="${s.reps ?? ''}" placeholder="reps">
                 <button class="tick ${s.done ? 'on' : ''}" data-sstick="${esc(b.id)}:${ii}:${r}" aria-label="Done">${icon('check', 19)}</button>
               </div>`;
@@ -723,14 +727,15 @@ function shortName(n) {
 }
 
 function setRows(sets, blockId, _r, ex, unit) {
-  const showsW = ex && ex.track === 'weight_reps';
+  const bwLoaded = ex && isBodyweightLoaded(ex);
+  const showsW = ex && (ex.track === 'weight_reps' || bwLoaded);
   const showsT = ex && ex.track === 'time';
   const showsD = ex && ex.track === 'distance';
-  return `<div class="set-row head log"><span></span>${showsW ? '<span>Weight</span>' : ''}<span>${showsT ? 'Secs' : showsD ? 'Metres' : 'Reps'}</span><span></span></div>`
+  return `<div class="set-row head log"><span></span>${showsW ? `<span>${bwLoaded ? 'Added weight' : 'Weight'}</span>` : ''}<span>${showsT ? 'Secs' : showsD ? 'Metres' : 'Reps'}</span><span></span></div>`
     + sets.map((s, i) => `
       <div class="set-row log">
         <span class="sr-n">${i + 1}</span>
-        ${showsW ? `<input type="number" inputmode="decimal" data-set="${esc(blockId)}:${i}" data-f="weight" value="${s.weight ?? ''}" placeholder="${unit}">` : ''}
+        ${showsW ? `<input type="number" inputmode="decimal" data-set="${esc(blockId)}:${i}" data-f="weight" value="${s.weight ?? ''}" placeholder="${bwLoaded ? `+${unit}` : unit}">` : ''}
         ${showsT ? `<input type="number" inputmode="numeric" data-set="${esc(blockId)}:${i}" data-f="seconds" value="${s.seconds ?? ''}" placeholder="secs">`
     : showsD ? `<input type="number" inputmode="numeric" data-set="${esc(blockId)}:${i}" data-f="distance" value="${s.distance ?? ''}" placeholder="m">`
       : `<input type="number" inputmode="numeric" data-set="${esc(blockId)}:${i}" data-f="reps" value="${s.reps ?? ''}" placeholder="reps">`}
@@ -748,7 +753,7 @@ function wireLogBlock(state, session, unit) {
       if (!b) return;
       b.sets[+i][inp.dataset.f] = num(inp.value);
       queueSave(session);
-      refreshTotals(session, unit);
+      refreshTotals(state, session, unit);
     };
   });
   document.querySelectorAll('[data-tick]').forEach((btn) => {
@@ -761,7 +766,7 @@ function wireLogBlock(state, session, unit) {
          blank there's nothing to record, so treat it as needing a number. */
       btn.classList.toggle('on', s.done);
       store.saveSession(session);
-      refreshTotals(session, unit);
+      refreshTotals(state, session, unit);
       buzz();
     };
   });
@@ -773,7 +778,7 @@ function wireLogBlock(state, session, unit) {
       if (!it.sets[+r]) it.sets[+r] = makeSet();
       it.sets[+r][inp.dataset.f] = num(inp.value);
       queueSave(session);
-      refreshTotals(session, unit);
+      refreshTotals(state, session, unit);
     };
   });
   document.querySelectorAll('[data-sstick]').forEach((btn) => {
@@ -785,7 +790,7 @@ function wireLogBlock(state, session, unit) {
       it.sets[+r].done = !it.sets[+r].done;
       btn.classList.toggle('on', it.sets[+r].done);
       store.saveSession(session);
-      refreshTotals(session, unit);
+      refreshTotals(state, session, unit);
       buzz();
     };
   });
@@ -796,7 +801,7 @@ function wireLogBlock(state, session, unit) {
       if (field === 'secondsText') b.result.seconds = parseDuration(inp.value);
       else b.result[field] = num(inp.value);
       queueSave(session);
-      refreshTotals(session, unit);
+      refreshTotals(state, session, unit);
     };
   });
   document.querySelectorAll('[data-addset]').forEach((btn) => {
@@ -810,9 +815,9 @@ function wireLogBlock(state, session, unit) {
   });
 }
 
-function refreshTotals(session, unit) {
+function refreshTotals(state, session, unit) {
   const box = el('totals');
-  if (box) box.innerHTML = totalsHtml(session, unit);
+  if (box) box.innerHTML = totalsHtml(state, session, unit);
 }
 
 function openSessionMenu(state, session) {
@@ -867,7 +872,7 @@ function finishSheet(state, session) {
 
   const close = sheet(`
     <h3>Finish this workout?</h3>
-    <div class="lede">${sessionSetCount(session)} sets logged. You can always reopen it later.</div>
+    <div class="lede">${sessionSetCount(state, session)} sets logged. You can always reopen it later.</div>
     ${hab && !already ? `
       <label class="checkrow">
         <input type="checkbox" id="tickHabit" checked>
@@ -889,7 +894,7 @@ function finishSheet(state, session) {
     close();
     view = 'home';
     redraw();
-    toast('Workout logged', `${sessionSetCount(session)} sets in the book.`);
+    toast('Workout logged', `${sessionSetCount(state, session)} sets in the book.`);
   };
   el('cancelFinish').onclick = close;
 }
@@ -1027,6 +1032,9 @@ function renderExercise(state, unit) {
         ${pb.best1RM ? `<div class="hint" style="margin-top:10px">
           Best estimate came from ${Math.round(pb.best1RM.rec.weight)} ${esc(unit)} × ${pb.best1RM.rec.reps}.
           Estimates only use deliberate sets of 12 reps or fewer.
+        </div>` : ''}
+        ${isBodyweightLoaded(ex) ? `<div class="hint" style="margin-top:10px">
+          Weight here includes your logged bodyweight. Anything you enter on a set is added on top of it.
         </div>` : ''}
       </div>` : `<div class="empty"><div class="big">${icon('chartLine', 34)}</div>No history yet. Log a workout with this in it.</div>`}
 

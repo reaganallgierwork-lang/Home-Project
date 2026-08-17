@@ -262,6 +262,24 @@ minute 11 of an AMRAP is real work, but running it through a 1RM formula would
 invent a max you never tested. Only deliberate sets of 12 reps or fewer feed the
 estimate.
 
+### Bodyweight movements count your actual weight
+
+Pull-ups, push-ups, dips, burpees, air squats — anything filed under the
+**Bodyweight** category and measured in reps — are worth your logged
+bodyweight, not zero. Leave the weight field blank on a set of pull-ups and
+it's credited at whatever you weighed that day, pulled from the **Body**
+tab's log (or your most recent weigh-in before it, if you didn't weigh in
+that exact day). If you've never logged a weigh-in yet, it's simply counted
+as zero until you do.
+
+Any number you do type in there is **added on top of your bodyweight**, not
+instead of it — that's what turns a plain pull-up into a weighted one. So
+183 lb bodyweight + a 25 lb dip belt logs as a 208 lb pull-up. This applies
+automatically to any exercise you add yourself under the Bodyweight category
+with reps tracking — nothing is hardcoded to specific exercise names — and
+it flows straight through to heaviest set, estimated 1RM, and volume on
+both the exercise's own history and the Data tab.
+
 ---
 
 ## The Body tab
@@ -429,8 +447,8 @@ cd test
 node engine.test.mjs      # 56 checks — scoring, streaks, tiers, the guardrail
 node migration.test.mjs   # 11 checks — the hydration counter migration
 node metrics.test.mjs     # 44 checks — bucketing, aggregation, trends
-node workouts.test.mjs    # 49 checks — blocks, set records, 1RM, templates
+node workouts.test.mjs    # 63 checks — blocks, set records, 1RM, templates, bodyweight loading
 node weight.test.mjs      # 38 checks — weigh-ins, photo storage, the quota fallback
 ```
 
-Needs Node.js installed. All 208 should pass.
+Needs Node.js installed. All 212 should pass.
