@@ -47,7 +47,8 @@ export function renderNutritionContent(state, redraw) {
   const totals = store.nutritionTotals(today);
   const hasToday = todayEntries.length > 0;
 
-  const recent = flattenRecent(state, 30);
+  const RECENT_LIMIT = 5;
+  const recent = flattenRecent(state, RECENT_LIMIT);
 
   el('bodyContent').innerHTML = `
     <button class="btn primary big" id="logFood">${icon('utensils', 18)} Log food</button>
@@ -63,7 +64,11 @@ export function renderNutritionContent(state, redraw) {
 
     ${state.meals.length ? `
       <div class="section-title">Frequent meals</div>
-      ${state.meals.slice().sort((a, b) => b.createdAt - a.createdAt).map((m) => mealRowHtml(m)).join('')}
+      <button class="picker" id="mealsPicker">
+        <span class="pk-ic">${icon('utensils', 20)}</span>
+        <span class="pk-tx"><b>Browse frequent meals</b><span>${state.meals.length} saved — tap to search and log one</span></span>
+        <span class="pk-ch">▾</span>
+      </button>
     ` : ''}
 
     <div class="section-title">Recent</div>
@@ -72,9 +77,14 @@ export function renderNutritionContent(state, redraw) {
         <div class="big">${icon('utensils', 34)}</div>
         Nothing logged yet. Log what you eat, and any linked habits — like a
         protein goal — fill themselves in from it.
-      </div>`}`;
+      </div>`}
+    ${recent.length === RECENT_LIMIT ? `
+      <div class="hint" style="text-align:center;margin-top:4px">
+        Showing the last ${RECENT_LIMIT}. Everything else is in the <b>History</b> calendar or the <b>Data</b> tab's table.
+      </div>` : ''}`;
 
   el('logFood').onclick = () => openFoodEntrySheet(store.get(), today, null, redraw);
+  if (el('mealsPicker')) el('mealsPicker').onclick = () => openMealPicker(today, redraw);
   document.querySelectorAll('#bodyContent [data-entry]').forEach((row) => {
     row.onclick = () => {
       const [day, id] = row.dataset.entry.split('|');
@@ -82,33 +92,65 @@ export function renderNutritionContent(state, redraw) {
       if (entry) openFoodEntrySheet(store.get(), day, entry, redraw);
     };
   });
-  document.querySelectorAll('#bodyContent [data-meal]').forEach((row) => {
-    row.onclick = (e) => {
-      if (e.target.closest('[data-meal-del]')) return;
-      const meal = store.get().meals.find((m) => m.id === row.dataset.meal);
-      if (meal) openFoodEntrySheet(store.get(), today, { ...meal, id: undefined }, redraw);
-    };
-  });
-  document.querySelectorAll('#bodyContent [data-meal-del]').forEach((b) => {
-    b.onclick = (e) => {
-      e.stopPropagation();
-      const meal = store.get().meals.find((m) => m.id === b.dataset.mealDel);
-      if (meal && confirm(`Forget "${meal.name}" as a frequent meal? This does not touch anything already logged.`)) {
-        store.deleteMeal(meal.id);
-        redraw();
-      }
-    };
-  });
 }
 
-/** Every logged entry across every day, newest first — capped for the
-    "Recent" list the same way weight.js caps its own recent-entries list. */
+/** Every logged entry across every day, newest first — capped so "Recent"
+    stays a quick glance, not an ever-growing scroll. Anything older is
+    still reachable from the History calendar or the Data tab's table. */
 function flattenRecent(state, limit) {
   const out = [];
   Object.keys(state.nutritionLog).forEach((day) => {
     state.nutritionLog[day].forEach((e) => out.push({ ...e, day }));
   });
   return out.sort((a, b) => b.loggedAt - a.loggedAt).slice(0, limit);
+}
+
+/** The frequent-meals list, in a searchable sheet rather than inline on the
+    page — inline was fine for three or four saved meals, but it just grows
+    forever as you save more, pushing "Recent" further down every time. Same
+    grouped-picker interaction language as the Data tab's metric picker. */
+function openMealPicker(today, redraw) {
+  const meals = store.get().meals.slice().sort((a, b) => b.createdAt - a.createdAt);
+
+  const close = sheet(`
+    <h3>Frequent meals</h3>
+    <div class="lede">Tap one to log it for today, or the ✕ to forget it.</div>
+    ${meals.length > 5 ? '<input type="text" id="mealSearch" placeholder="Search…" class="search">' : ''}
+    <div id="mealList">${meals.map((m) => mealRowHtml(m)).join('')}</div>
+    <button class="btn ghost" id="mealsCancel">Close</button>`);
+
+  el('mealsCancel').onclick = close;
+
+  document.querySelectorAll('.modal [data-meal]').forEach((row) => {
+    row.onclick = (e) => {
+      if (e.target.closest('[data-meal-del]')) return;
+      const meal = store.get().meals.find((m) => m.id === row.dataset.meal);
+      if (!meal) return;
+      close();
+      openFoodEntrySheet(store.get(), today, { ...meal, id: undefined }, redraw);
+    };
+  });
+  document.querySelectorAll('.modal [data-meal-del]').forEach((b) => {
+    b.onclick = (e) => {
+      e.stopPropagation();
+      const meal = store.get().meals.find((m) => m.id === b.dataset.mealDel);
+      if (meal && confirm(`Forget "${meal.name}" as a frequent meal? This does not touch anything already logged.`)) {
+        store.deleteMeal(meal.id);
+        close();
+        redraw();
+      }
+    };
+  });
+
+  if (el('mealSearch')) {
+    el('mealSearch').oninput = () => {
+      const q = el('mealSearch').value.trim().toLowerCase();
+      document.querySelectorAll('.modal [data-meal]').forEach((row) => {
+        const meal = meals.find((m) => m.id === row.dataset.meal);
+        row.style.display = (!meal || !q || meal.name.toLowerCase().includes(q)) ? '' : 'none';
+      });
+    };
+  }
 }
 
 function macroLine(e) {
@@ -175,6 +217,11 @@ export function openFoodEntrySheet(state, day, prefill, onSaved = () => {}) {
       <div class="field"><label>Fat (g)</label><input type="number" inputmode="decimal" id="fFat" value="${prefill?.fat ?? ''}" placeholder="g"></div>
     </div>
     ${!isEdit ? `
+      <div class="field">
+        <label>Count</label>
+        <input type="number" inputmode="decimal" id="fQty" value="1" min="0.1" step="1">
+        <div class="help" id="fQtyPreview">Multiplies every field above — 2 means two of these (e.g. two packs of jerky).</div>
+      </div>
       <label class="checkrow">
         <input type="checkbox" id="fSaveMeal">
         <span>Save this as a frequent meal</span>
@@ -183,17 +230,45 @@ export function openFoodEntrySheet(state, day, prefill, onSaved = () => {}) {
     ${isEdit ? '<button class="btn danger" id="fDelete">Delete this entry</button>' : ''}
     <button class="btn ghost" id="fCancel">Cancel</button>`);
 
+  /* The Count field scales the four macro fields at save time only — it is
+     not a stored concept. A frequent meal is saved at its PER-UNIT numbers
+     (rawPatch below) regardless of how many you logged this time, so next
+     time you log "1" of it you get one serving back, not whatever multiple
+     you happened to eat today. */
+  if (el('fQty')) {
+    const updatePreview = () => {
+      const q = Math.max(0.1, +el('fQty').value || 1);
+      if (Math.abs(q - 1) < 1e-9) {
+        el('fQtyPreview').textContent = 'Multiplies every field above — 2 means two of these (e.g. two packs of jerky).';
+        return;
+      }
+      const ids = { calories: 'fCal', protein: 'fProt', carbs: 'fCarb', fat: 'fFat' };
+      const parts = FIELDS.map((f) => {
+        const raw = el(ids[f]).value.trim();
+        return raw === '' ? null : fmt(+raw * q, f);
+      }).filter(Boolean);
+      el('fQtyPreview').textContent = parts.length ? `× ${q} = ${parts.join(' · ')}` : `× ${q}`;
+    };
+    ['fQty', 'fCal', 'fProt', 'fCarb', 'fFat'].forEach((id) => { el(id).oninput = updatePreview; });
+  }
+
   el('fSave').onclick = () => {
     const dateVal = el('fDate').value || day;
-    const patch = {
+    const rawPatch = {
       name: el('fName').value,
       calories: el('fCal').value.trim(),
       protein: el('fProt').value.trim(),
       carbs: el('fCarb').value.trim(),
       fat: el('fFat').value.trim(),
     };
-    const anyField = FIELDS.some((f) => patch[f] !== '');
+    const anyField = FIELDS.some((f) => rawPatch[f] !== '');
     if (!anyField) { alert('Add at least a calorie or macro number.'); return; }
+
+    const qty = el('fQty') ? Math.max(0.1, +el('fQty').value || 1) : 1;
+    const patch = Math.abs(qty - 1) < 1e-9 ? rawPatch : {
+      ...rawPatch,
+      ...Object.fromEntries(FIELDS.map((f) => [f, rawPatch[f] === '' ? '' : String(+rawPatch[f] * qty)])),
+    };
 
     if (isEdit && dateVal !== day) {
       /* Changing the date is really "move this entry" — delete the old slot
@@ -206,7 +281,7 @@ export function openFoodEntrySheet(state, day, prefill, onSaved = () => {}) {
     } else {
       store.logFoodEntry(dateVal, patch);
     }
-    if (!isEdit && el('fSaveMeal')?.checked) store.saveMeal(patch);
+    if (!isEdit && el('fSaveMeal')?.checked) store.saveMeal(rawPatch);
 
     close();
     onSaved();

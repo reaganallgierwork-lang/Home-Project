@@ -398,26 +398,35 @@ tab over to your food log — it's a section of Body, not a separate tab, so
 the tab bar stays at seven.
 
 **Log food** opens a sheet for one item: a name, a date (defaults to today,
-backdatable like everything else), and calories/protein/carbs/fat. Any field
-you skip is left **unknown, not zero** — if you only tracked calories for a
-snack, its protein just isn't counted toward the day's protein total, the
-same way an unlogged day isn't counted as a zero anywhere else in the app.
-Today's four macro tiles show a dash until you've logged at least one thing
-today; after that, each tile is the real sum for the day, including an
-honest 0 if you logged food but never entered a value for that particular
-nutrient.
+backdatable like everything else), calories/protein/carbs/fat, and a
+**Count** — how many of this you had. Leave it at 1, or set it to 2 for two
+packs of the same thing; it multiplies all four macro fields at the moment
+you save, with a live preview under the field so you can see the total
+before you commit. It doesn't change what the fields themselves show — those
+stay the per-one numbers — and it isn't part of "Save this as a frequent
+meal" either, so a saved meal always represents one serving no matter what
+count you logged it at that particular time. Any macro field you skip is
+left **unknown, not zero** — if you only tracked calories for a snack, its
+protein just isn't counted toward the day's protein total, the same way an
+unlogged day isn't counted as a zero anywhere else in the app. Today's four
+macro tiles show a dash until you've logged at least one thing today; after
+that, each tile is the real sum for the day, including an honest 0 if you
+logged food but never entered a value for that particular nutrient.
 
 **Frequent meals** — tick "Save this as a frequent meal" while logging
-something you eat often, and it shows up as a one-tap shortcut next to the
-day's tiles. Tapping it opens the entry sheet pre-filled with that meal's
-macros so you can log it for today (or adjust it first) without retyping
-anything; the **✕** on it forgets the shortcut without touching any day you
-already logged with it.
+something you eat often, and it's reachable afterward from **Browse
+frequent meals**, one button below the day's tiles. It opens a searchable
+list rather than piling shortcut cards onto the page itself, so it stays
+just as fast to use whether you've saved three meals or three hundred. Tap
+one to open the entry sheet pre-filled with its macros — adjust the count,
+the date, or anything else before logging it — and the **✕** beside it
+forgets the shortcut without touching any day you already logged with it.
 
-Every entry from the last 30 days also shows up in a flat **Recent** list
-underneath, and tapping one opens it for editing or deleting. The same food
-log for a specific day is also reachable from that day's entry in the
-**History** calendar, right alongside its habits, workout, and weight.
+The **Recent** list underneath shows your last 5 entries across every day,
+so it stays a glance rather than a scroll. Tapping one opens it for editing
+or deleting. Everything older is still reachable from that day's entry in
+the **History** calendar (right alongside its habits, workout, and weight)
+or from the full **Table** on the Data tab.
 
 **Feeding into a goal.** Link a counter habit — like a protein or calorie
 target — to one of the four nutrients from the habit editor (see
