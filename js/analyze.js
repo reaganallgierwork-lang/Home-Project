@@ -19,7 +19,7 @@ import {
 import { habitTableColumns } from './metrics-habits.js';
 import { workoutTableColumns } from './metrics-workouts.js';
 import { bodyTableColumns } from './metrics-weight.js';
-import { renderChart, chooseAxis } from './chart.js';
+import { renderChart, chooseAxis, alignBuckets } from './chart.js';
 import { icon } from './icons.js';
 import { openSheet } from './sheet.js';
 import { el, esc } from './dom.js';
@@ -183,7 +183,7 @@ function renderTrends(state, u) {
     </div>
     ${bucketBreakdown(series, metric, fmt)}`;
 
-  /* --- draw the chart, and redraw it if the phone rotates --- */
+  /* --- build the chart's inputs (drawn further down, AFTER wiring) --- */
   const host = el('chartHost');
   const primarySpec = {
     id: metric.id,
@@ -198,16 +198,21 @@ function renderTrends(state, u) {
   };
   const chartSeries = [primarySpec];
   if (series2) {
+    /* Align first, then decide the axis — the two metrics can cover
+       different spans (a habit is clamped to its createdAt, body weight
+       isn't), and the axis should be scaled to the values that actually
+       get plotted, not to ones that fall outside the chart's window. */
+    const aligned = alignBuckets(primarySpec.buckets, { unit: metric2.unit, buckets: series2.buckets });
     const secondarySpec = {
       id: metric2.id,
       label: `${metric2.group} — ${metric2.label}`,
       unit: metric2.unit,
       color: 'var(--series-2)',
-      buckets: series2.buckets,
+      buckets: aligned.buckets,
       form: metric2.form,
       target: null,
       format: (v) => fmt2(v),
-      axis: chooseAxis(primarySpec, { unit: metric2.unit, buckets: series2.buckets }),
+      axis: chooseAxis(primarySpec, aligned),
     };
     chartSeries.push(secondarySpec);
   }
@@ -216,25 +221,14 @@ function renderTrends(state, u) {
     ariaLabel: `${metric.group} ${metric.label}${metric2 ? ` compared with ${metric2.group} ${metric2.label}` : ''} over the last ${span} days`,
     onEmpty: 'Nothing logged in this window yet.',
   });
-  draw();
 
-  /* Redraw only when the width genuinely changes — a rotation or a window
-     resize. iOS fires `resize` every time the address bar collapses while you
-     scroll, and redrawing on that would keep yanking the chart back to its
-     default readout mid-read. */
-  let lastW = host.clientWidth;
-  let t;
-  const onResize = () => {
-    if (host.clientWidth === lastW) return;
-    lastW = host.clientWidth;
-    clearTimeout(t);
-    t = setTimeout(draw, 150);
-  };
-  if (window.__chartResize) window.removeEventListener('resize', window.__chartResize);
-  window.__chartResize = onResize;
-  window.addEventListener('resize', onResize);
-
-  /* --- wiring --- */
+  /* --- wiring ---
+     Deliberately BEFORE draw(). These handlers are how you change the
+     selection, including undoing whatever produced a bad chart — so if
+     drawing ever throws, the controls have to already work, or the tab is
+     bricked with no way back out except clearing site data. (That is not
+     hypothetical: an unaligned second series used to throw here and took
+     every button on the screen down with it.) */
   el('metricPicker').onclick = () => openPicker(state, pickable, metric.id, {
     title: 'What do you want to look at?',
     lede: 'Everything you track shows up here automatically.',
@@ -282,6 +276,25 @@ function renderTrends(state, u) {
       b.onclick = () => { store.update((s) => { ui(s).agg = b.dataset.agg; }); redraw(); };
     });
   }
+
+  /* --- now draw, with the controls already live --- */
+  draw();
+
+  /* Redraw only when the width genuinely changes — a rotation or a window
+     resize. iOS fires `resize` every time the address bar collapses while you
+     scroll, and redrawing on that would keep yanking the chart back to its
+     default readout mid-read. */
+  let lastW = host.clientWidth;
+  let t;
+  const onResize = () => {
+    if (host.clientWidth === lastW) return;
+    lastW = host.clientWidth;
+    clearTimeout(t);
+    t = setTimeout(draw, 150);
+  };
+  if (window.__chartResize) window.removeEventListener('resize', window.__chartResize);
+  window.__chartResize = onResize;
+  window.addEventListener('resize', onResize);
 }
 
 /** The numbers behind the chart, so nothing is only reachable by hovering. */

@@ -66,7 +66,8 @@ function niceMax(v) {
  *     targetLabel: string,
  *     format: (value) => string,
  *     axis: 'left' | 'right',           // which scale it's measured against
- *   }, ...],   // 1 or 2 entries, sharing the same bucket keys/length
+ *   }, ...],   // 1 or 2 entries; the second is aligned onto the first's
+ *              // bucket keys here, so callers need not pre-match them
  *   ariaLabel: string,
  *   onEmpty: string,
  * }
@@ -75,7 +76,7 @@ export function renderChart(host, spec) {
   host.textContent = '';
   const all = (spec.series || []).filter((s) => s && s.buckets && s.buckets.length);
   const primary = all[0];
-  const secondary = all[1] || null;
+  let secondary = all[1] || null;
 
   if (!primary) {
     const empty = document.createElement('div');
@@ -84,6 +85,17 @@ export function renderChart(host, spec) {
     host.appendChild(empty);
     return;
   }
+
+  /* Two series do NOT arrive covering the same days. A metric can be clamped
+     to the window where it actually exists (a habit starts at its createdAt;
+     an archived one stops), so comparing body weight against a habit hands
+     us a 6-bucket array and a 3-bucket one. Pairing those up by array index
+     would draw the habit's Monday over the weight's Wednesday — an invented
+     alignment that makes the comparison silently wrong — and then read past
+     the end of the shorter array. So the second series is re-keyed onto the
+     first's buckets here: matching days line up, missing ones become honest
+     gaps, and everything downstream can index both arrays interchangeably. */
+  if (secondary) secondary = alignBuckets(primary.buckets, secondary);
 
   const buckets = primary.buckets;
   const n = buckets.length;
@@ -283,7 +295,10 @@ export function renderChart(host, spec) {
     if (i === null || i < 0 || i >= n) return;
     activeIdx = i;
     [primary, secondary].filter(Boolean).forEach((s, k) => {
-      const b = s.buckets[i];
+      /* Both arrays are aligned to the same keys by now, so this should
+         always hit — the fallback just means a readout can never be the
+         thing that throws and takes the whole screen's wiring with it. */
+      const b = s.buckets[i] || { value: null, label: '', total: 0, logged: 0 };
       const { rVal, rLab } = rows[k];
       rVal.textContent = b.value === null ? 'Not logged' : s.format(b.value);
       rLab.textContent = b.label + (b.value !== null && b.total > 1 ? ` · ${b.logged}/${b.total} days logged` : '');
@@ -320,6 +335,30 @@ export function renderChart(host, spec) {
 
   host.appendChild(svg);
   setActive(lastIdx, false);
+}
+
+/**
+ * Re-key a series onto a reference set of buckets, matching on bucket key
+ * (the day/week/month), never on position. Days the series has no bucket
+ * for become value:null — a real gap, drawn as a break in the line, rather
+ * than a neighbouring day's number slid over to fill the hole.
+ *
+ * Exported for the tests: this is the guarantee that a comparison chart
+ * plots both measures against the same dates.
+ */
+export function alignBuckets(reference, series) {
+  const byKey = new Map(series.buckets.map((b) => [b.key, b]));
+  return {
+    ...series,
+    buckets: reference.map((ref) => byKey.get(ref.key) || {
+      key: ref.key,
+      label: ref.label,
+      shortLabel: ref.shortLabel,
+      value: null,
+      logged: 0,
+      total: ref.total,
+    }),
+  };
 }
 
 /**
