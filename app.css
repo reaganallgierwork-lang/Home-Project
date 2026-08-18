@@ -55,6 +55,10 @@
      swatch and passes every check; the brighter gold does not (too light for
      the dark band) and is reserved for text and UI accents. */
   --series-1:  #B8860B;
+  /* A cool blue reads as unmistakably "the other line" against a chart built
+     entirely from warm gold/bronze — no risk of confusing it with the
+     primary series, streak flames, or anything else the app colours gold. */
+  --series-2:  #4EA1D3;
   --grid:      #21262F;
 
   --radius:    14px;
@@ -619,6 +623,26 @@ a { color: var(--gold); }
 .picker .pk-tx span { font-size: 12px; color: var(--muted); }
 .picker .pk-ch { color: var(--faint); font-size: 13px; }
 
+/* the metric picker plus the "browse exercises" door beside it */
+.picker-row { display: flex; align-items: stretch; gap: 8px; }
+.picker-row .picker { flex: 1; min-width: 0; }
+.picker-row .icon-btn { width: 46px; height: auto; }
+
+/* the optional second, overlaid metric */
+.compare-chip {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  padding: 10px 14px; border-radius: 999px; text-align: center;
+  background: var(--card-2); border: 1px dashed var(--line-2); color: var(--muted);
+  font-size: 12.5px; font-weight: 650;
+}
+.compare-chip.on {
+  justify-content: space-between; border-style: solid;
+  background: rgba(78,161,211,.08); border-color: rgba(78,161,211,.35); color: var(--text);
+}
+.compare-chip .cc-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--series-2); }
+.compare-chip .cc-tx { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.compare-chip .cc-x { flex: none; color: var(--faint); display: grid; place-items: center; padding: 2px; }
+
 /* hero figure + delta */
 .hero-wrap { margin-bottom: 6px; }
 .hero {
@@ -657,11 +681,18 @@ a { color: var(--gold); }
 .chart-empty { padding: 40px 12px; text-align: center; color: var(--muted); font-size: 13.5px; }
 
 .chart-readout {
-  display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
+  display: flex; flex-direction: column; gap: 3px;
   min-height: 22px; margin-bottom: 2px;
 }
+.chart-readout-row { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.chart-readout-row i { width: 7px; height: 7px; border-radius: 50%; align-self: center; flex: none; }
 .chart-readout b { font-size: 18px; color: var(--text); }
 .chart-readout span { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; }
+
+/* which line is which, when two are overlaid */
+.chart-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 10px 0 -2px; }
+.chart-legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); font-weight: 650; }
+.chart-legend-item i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 
 /* stat tiles */
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(66px, 1fr)); gap: 7px; }

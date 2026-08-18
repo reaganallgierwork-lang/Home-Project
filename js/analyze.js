@@ -19,7 +19,7 @@ import {
 import { habitTableColumns } from './metrics-habits.js';
 import { workoutTableColumns } from './metrics-workouts.js';
 import { bodyTableColumns } from './metrics-weight.js';
-import { renderChart } from './chart.js';
+import { renderChart, chooseAxis } from './chart.js';
 import { icon } from './icons.js';
 import { openSheet } from './sheet.js';
 import { el, esc } from './dom.js';
@@ -30,12 +30,21 @@ function ui(state) {
   if (!state.ui) state.ui = {};
   if (!state.ui.analyze) {
     state.ui.analyze = {
-      view: 'trends', metricId: 'day:score', range: '30d',
+      view: 'trends', metricId: 'day:score', metricId2: null, range: '30d',
       granularity: 'auto', agg: null, tableSort: 'day', tableDir: -1, tableRange: '30d',
     };
   }
+  /* Saves from before comparison existed just won't have this field. */
+  if (state.ui.analyze.metricId2 === undefined) state.ui.analyze.metricId2 = null;
   return state.ui.analyze;
 }
+
+/* Exercise/workout metrics get their own picker (see the Data tab README
+   section on why) — every group is a distinct exercise or metcon, and there
+   can be dozens, so mixing them into the main picker would bury everything
+   else under a wall of lift names. Splitting on sourceId keeps this file
+   from needing to know anything about what "workouts" means. */
+const isExercise = (m) => m.sourceId === 'workouts';
 
 let redraw = () => {};
 
@@ -72,8 +81,11 @@ function renderTrends(state, u) {
     el('analyzeBody').innerHTML = `<div class="empty"><div class="big">${icon('chartLine', 34)}</div>Nothing to chart yet. Log a few days first.</div>`;
     return;
   }
+  const pickable = metrics.filter((m) => !isExercise(m));
+  const exercises = metrics.filter(isExercise);
 
   let metric = getMetric(state, u.metricId) || metrics[0];
+  const metric2 = u.metricId2 ? getMetric(state, u.metricId2) : null;
   const earliest = earliestDay(state);
   const range = resolveRange(u.range, earliest);
   const span = store.rangeDays(range.from, range.to).length;
@@ -86,17 +98,35 @@ function renderTrends(state, u) {
 
   const fmt = (v) => formatValue(metric, v);
 
+  /* --- an optional second series, overlaid on the same chart for
+     comparison — see chart.js for how the axis gets decided. --- */
+  let series2 = null;
+  let fmt2 = null;
+  if (metric2) {
+    series2 = buildSeries(state, metric2, { from: range.from, to: range.to, granularity, agg: metric2.defaultAgg });
+    fmt2 = (v) => formatValue(metric2, v);
+  }
+
   /* --- the filter row: one row, above everything it scopes --- */
   const filters = `
     <div class="filter-row">
-      <button class="picker" id="metricPicker">
-        <span class="pk-ic">${icon(metric.groupIcon || metric.sourceIcon || 'chartLine', 20)}</span>
-        <span class="pk-tx"><b>${esc(metric.group)}</b><span>${esc(metric.label)}</span></span>
-        <span class="pk-ch">▾</span>
-      </button>
+      <div class="picker-row">
+        <button class="picker" id="metricPicker">
+          <span class="pk-ic">${icon(metric.groupIcon || metric.sourceIcon || 'chartLine', 20)}</span>
+          <span class="pk-tx"><b>${esc(metric.group)}</b><span>${esc(metric.label)}</span></span>
+          <span class="pk-ch">▾</span>
+        </button>
+        <button class="icon-btn" id="exercisePicker" aria-label="Browse exercises" title="Browse exercises">${icon('dumbbell', 19)}</button>
+      </div>
       <div class="seg small" id="rangeSeg">
         ${RANGES.map((r) => `<button data-range="${r.key}" class="${u.range === r.key ? 'on' : ''}">${r.key === 'all' ? 'All' : r.key.toUpperCase()}</button>`).join('')}
       </div>
+      <button class="compare-chip ${metric2 ? 'on' : ''}" id="comparePicker">
+        ${metric2 ? `
+          <i class="cc-dot"></i><span class="cc-tx">${esc(metric2.group)} — ${esc(metric2.label)}</span>
+          <span class="cc-x" id="compareRemove">${icon('close', 13)}</span>`
+    : `${icon('layers', 15)} Compare with another metric`}
+      </button>
     </div>`;
 
   /* --- optional toggles: how days roll up, and bucket size --- */
@@ -155,13 +185,35 @@ function renderTrends(state, u) {
 
   /* --- draw the chart, and redraw it if the phone rotates --- */
   const host = el('chartHost');
-  const draw = () => renderChart(host, {
+  const primarySpec = {
+    id: metric.id,
+    label: `${metric.group} — ${metric.label}`,
+    unit: metric.unit,
+    color: 'var(--series-1)',
     buckets: series.buckets,
     form: granularity === 'day' && metric.form === 'line' ? 'line' : (metric.form === 'line' && series.buckets.length > 12 ? 'line' : 'bar'),
     target: metric.target,
     targetLabel: `goal ${fmt(metric.target)}`,
     format: (v) => fmt(v),
-    ariaLabel: `${metric.group} ${metric.label} over the last ${span} days`,
+  };
+  const chartSeries = [primarySpec];
+  if (series2) {
+    const secondarySpec = {
+      id: metric2.id,
+      label: `${metric2.group} — ${metric2.label}`,
+      unit: metric2.unit,
+      color: 'var(--series-2)',
+      buckets: series2.buckets,
+      form: metric2.form,
+      target: null,
+      format: (v) => fmt2(v),
+      axis: chooseAxis(primarySpec, { unit: metric2.unit, buckets: series2.buckets }),
+    };
+    chartSeries.push(secondarySpec);
+  }
+  const draw = () => renderChart(host, {
+    series: chartSeries,
+    ariaLabel: `${metric.group} ${metric.label}${metric2 ? ` compared with ${metric2.group} ${metric2.label}` : ''} over the last ${span} days`,
     onEmpty: 'Nothing logged in this window yet.',
   });
   draw();
@@ -183,7 +235,39 @@ function renderTrends(state, u) {
   window.addEventListener('resize', onResize);
 
   /* --- wiring --- */
-  el('metricPicker').onclick = () => openMetricPicker(state, metrics, metric);
+  el('metricPicker').onclick = () => openPicker(state, pickable, metric.id, {
+    title: 'What do you want to look at?',
+    lede: 'Everything you track shows up here automatically.',
+    onPick: (id) => { store.update((s) => { ui(s).metricId = id; ui(s).agg = null; }); redraw(); },
+  });
+  el('exercisePicker').onclick = () => {
+    if (!exercises.length) {
+      openPicker(state, [], null, {
+        title: 'Which exercise?',
+        lede: 'Nothing logged yet — train something on the Train tab and it shows up here.',
+      });
+      return;
+    }
+    openPicker(state, exercises, isExercise(metric) ? metric.id : null, {
+      title: 'Which exercise?',
+      lede: 'Only exercises and metcons you’ve actually logged show up here.',
+      onPick: (id) => { store.update((s) => { ui(s).metricId = id; ui(s).agg = null; }); redraw(); },
+    });
+  };
+  el('comparePicker').onclick = (ev) => {
+    if (ev.target.closest('#compareRemove')) {
+      store.update((s) => { ui(s).metricId2 = null; });
+      redraw();
+      return;
+    }
+    openPicker(state, metrics.filter((m) => m.id !== metric.id), metric2?.id, {
+      title: 'Compare with what?',
+      lede: 'Overlaid on the same chart, in its own colour.',
+      allowNone: !!metric2,
+      noneLabel: 'Remove the comparison',
+      onPick: (id) => { store.update((s) => { ui(s).metricId2 = id; }); redraw(); },
+    });
+  };
   el('rangeSeg').querySelectorAll('button').forEach((b) => {
     b.onclick = () => {
       store.update((s) => { ui(s).range = b.dataset.range; ui(s).granularity = 'auto'; });
@@ -220,9 +304,23 @@ function bucketBreakdown(series, metric, fmt) {
     </div>`;
 }
 
-/* ---------- the metric picker sheet ---------- */
+/* ---------- the generic picker sheet ----------
+   Grouped, searchable, and reused for three different jobs: choosing the
+   main chart metric, browsing exercises (a separate door so the main list
+   isn't buried under every lift you've ever logged), and choosing a second
+   metric to overlay for comparison. Each caller supplies its own list of
+   metrics, its own copy, and its own onPick — this file never special-cases
+   which job it's doing. */
 
-function openMetricPicker(state, metrics, current) {
+function openPicker(state, metrics, currentId, opts = {}) {
+  const {
+    title = 'What do you want to look at?',
+    lede = 'Everything you track shows up here automatically.',
+    onPick = null,
+    allowNone = false,
+    noneLabel = 'Clear',
+  } = opts;
+
   const groups = [];
   metrics.forEach((m) => {
     let g = groups.find((x) => x.name === m.group);
@@ -231,46 +329,51 @@ function openMetricPicker(state, metrics, current) {
   });
 
   const close = openSheet(`
-    <h3>What do you want to look at?</h3>
-    <div class="lede">Everything you track shows up here automatically.</div>
-    <input type="text" id="metricSearch" placeholder="Search…" class="search">
+    <h3>${esc(title)}</h3>
+    <div class="lede">${esc(lede)}</div>
+    ${metrics.length ? '<input type="text" id="metricSearch" placeholder="Search…" class="search">' : ''}
+    ${allowNone ? `<button class="btn" id="pickNone">${noneLabel}</button>` : ''}
     <div id="metricList">
-      ${groups.map((g) => `
+      ${groups.length ? groups.map((g) => `
         <div class="pick-group" data-name="${esc(g.name.toLowerCase())}">
           <div class="pick-head">${icon(g.icon || 'chartLine', 14)}${esc(g.name)}</div>
           ${g.items.map((m) => `
-            <button class="pick-item ${m.id === current.id ? 'on' : ''}" data-id="${esc(m.id)}" data-label="${esc(m.label.toLowerCase())}">
+            <button class="pick-item ${m.id === currentId ? 'on' : ''}" data-id="${esc(m.id)}" data-label="${esc(m.label.toLowerCase())}">
               <span>${esc(m.label)}</span>
-              ${m.id === current.id ? icon('check', 16) : ''}
+              ${m.id === currentId ? icon('check', 16) : ''}
             </button>`).join('')}
-        </div>`).join('')}
+        </div>`).join('') : `<div class="hint">Nothing here yet.</div>`}
     </div>
     <button class="btn ghost" id="pickCancel">Close</button>`);
 
   el('pickCancel').onclick = close;
+  if (el('pickNone')) {
+    el('pickNone').onclick = () => { close(); if (onPick) onPick(null); };
+  }
 
   document.querySelectorAll('.modal .pick-item').forEach((b) => {
     b.onclick = () => {
-      store.update((s) => { ui(s).metricId = b.dataset.id; ui(s).agg = null; });
       close();
-      redraw();
+      if (onPick) onPick(b.dataset.id);
     };
   });
 
   const search = el('metricSearch');
-  search.oninput = () => {
-    const q = search.value.trim().toLowerCase();
-    document.querySelectorAll('.modal .pick-group').forEach((g) => {
-      const groupHit = g.dataset.name.includes(q);
-      let any = false;
-      g.querySelectorAll('.pick-item').forEach((it) => {
-        const hit = !q || groupHit || it.dataset.label.includes(q);
-        it.style.display = hit ? '' : 'none';
-        if (hit) any = true;
+  if (search) {
+    search.oninput = () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.modal .pick-group').forEach((g) => {
+        const groupHit = g.dataset.name.includes(q);
+        let any = false;
+        g.querySelectorAll('.pick-item').forEach((it) => {
+          const hit = !q || groupHit || it.dataset.label.includes(q);
+          it.style.display = hit ? '' : 'none';
+          if (hit) any = true;
+        });
+        g.style.display = any ? '' : 'none';
       });
-      g.style.display = any ? '' : 'none';
-    });
-  };
+    };
+  }
 }
 
 /* ============================================================================

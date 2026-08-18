@@ -452,6 +452,12 @@ metrics (total volume, sets performed, days trained) and any named metcon's
 time or rounds. That's the long game: pick "Bench Press → Estimated 1RM", set
 the range to **All time**, and watch it climb over the years.
 
+Exercises get their own **dedicated picker** rather than sitting in the main
+list — tap the small dumbbell button next to the metric picker. It's the same
+searchable, grouped picker either way; splitting it off just means the main
+list stays short instead of getting buried under every lift you've ever
+logged, and the exercise one has a search bar built in for the same reason.
+
 Your body weight log gets a group too, right alongside habits and lifts — same
 chart, same date-range picker, same table columns. Nutrition gets the same
 treatment — calories, protein, carbs and fat each chart on their own, plus a
@@ -459,6 +465,19 @@ treatment — calories, protein, carbs and fat each chart on their own, plus a
 is left out of the average, same as everywhere else; a day that logged food
 but never touched a particular nutrient is counted as a real 0 for it, not
 skipped.
+
+**Compare two things on one chart.** Tap **Compare with another metric** below
+the range buttons to overlay a second line — protein against your calorie
+budget, bodyweight against a lift, whatever you're actually trying to relate.
+Each series gets its own colour and its own line in the legend. If the two
+are genuinely on the same footing — same unit, similar scale, like two body
+weights or two lifts — they share one axis so the lines are directly
+comparable. If they're not — different units, or one dwarfs the other — the
+second gets its **own axis on the right**, colour-matched to its line, so you
+can never mistake "these two lines cross" for "these two values are equal."
+Tap the chip again to swap the comparison, or the **×** to drop it. Capped at
+two series on purpose — a third turns a chart into noise on a phone-width
+screen.
 
 Choose a window (7 days to all time), and the chart buckets it sensibly — by
 day for short windows, by week or month for long ones, and you can override
