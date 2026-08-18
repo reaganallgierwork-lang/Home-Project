@@ -114,6 +114,7 @@ function freshState() {
     /* one-time data migrations already applied — see normalise() below */
     migratedHydrationV1: true,
     migratedCalorieBudgetV1: true,
+    migratedProteinLinkV1: true,
     /* remembered screen state, e.g. the Data tab's last selection */
     ui: {},
 
@@ -213,6 +214,7 @@ function normalise(raw) {
     seen: Array.isArray(raw.seen) ? raw.seen : [],
     migratedHydrationV1: !!raw.migratedHydrationV1,
     migratedCalorieBudgetV1: !!raw.migratedCalorieBudgetV1,
+    migratedProteinLinkV1: !!raw.migratedProteinLinkV1,
     /* Remembered screen state (which metric the Data tab was showing, etc).
        Purely cosmetic — safe to be missing or stale. */
     ui: raw.ui && typeof raw.ui === 'object' ? raw.ui : {},
@@ -410,6 +412,25 @@ function normalise(raw) {
       });
     }
     s.migratedCalorieBudgetV1 = true;
+  }
+
+  /* ---- one-time migration: link an existing protein counter to the food
+     log --------------------------------------------------------------------
+     Nutrition-linking a habit disables its manual +/-, which is exactly the
+     kind of surprise behaviour change that shouldn't happen silently — so
+     when the Nutrition section first shipped, it deliberately left this as
+     something you opt into per habit rather than something done for you.
+     In practice nobody found the opt-in: a protein-goal counter you were
+     already hand-logging is the obvious, expected thing to auto-fill from
+     food you log, not an edge case that needs a manual switch. So this
+     finds a counter habit that looks like a protein goal by name and links
+     it automatically, once. If you don't want that, unlink it from the
+     habit editor afterward and it will not relink itself. */
+  if (!s.migratedProteinLinkV1) {
+    const hab = s.habits.find((h) => h.type === 'scale' && h.inputStyle === 'counter'
+      && !h.nutritionLink && h.name.trim().toLowerCase().includes('protein'));
+    if (hab) hab.nutritionLink = 'protein';
+    s.migratedProteinLinkV1 = true;
   }
 
   return s;

@@ -257,10 +257,11 @@ Tap the **gear** in the top right of the log screen. From there you can:
   **Fill this in automatically from** dropdown — Calories, Protein, Carbs, or
   Fat. Linking it hands the counter over entirely to whatever you log on the
   Body tab's Nutrition section: the +/− and the manual entry field turn off,
-  and the number fills itself in from that day's food. This is opt-in and
-  per-habit — nothing links itself automatically, so if you want your existing
-  "Protein target" habit to track your actual food log instead of manual taps,
-  come here and set it.
+  and the number fills itself in from that day's food. A protein-goal counter
+  gets linked to Protein automatically the first time you open the app after
+  this shipped — the app can tell what a habit named for protein wants without
+  you having to go find the setting. Anything else (Calories, Carbs, Fat, or a
+  differently-named counter) is still your call: come here and set it.
 - **Add a Calorie budget habit** — the fourth option in the Type dropdown.
   It's a counter that runs backwards from every other one: instead of
   rewarding more, it wants you at or under a budget computed as your TDEE
