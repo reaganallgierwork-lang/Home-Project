@@ -10,7 +10,7 @@
    every phone to throw away the old copy and pull the new one.
    ========================================================================== */
 
-const CACHE = 'ascent-v19';
+const CACHE = 'ascent-v20';
 
 const FILES = [
   './',

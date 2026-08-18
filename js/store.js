@@ -115,6 +115,7 @@ function freshState() {
     migratedHydrationV1: true,
     migratedCalorieBudgetV1: true,
     migratedProteinLinkV1: true,
+    migratedNutritionResyncV1: true,
     /* remembered screen state, e.g. the Data tab's last selection */
     ui: {},
 
@@ -215,6 +216,7 @@ function normalise(raw) {
     migratedHydrationV1: !!raw.migratedHydrationV1,
     migratedCalorieBudgetV1: !!raw.migratedCalorieBudgetV1,
     migratedProteinLinkV1: !!raw.migratedProteinLinkV1,
+    migratedNutritionResyncV1: !!raw.migratedNutritionResyncV1,
     /* Remembered screen state (which metric the Data tab was showing, etc).
        Purely cosmetic — safe to be missing or stale. */
     ui: raw.ui && typeof raw.ui === 'object' ? raw.ui : {},
@@ -410,6 +412,10 @@ function normalise(raw) {
         archivedAt: null,
         createdAt: todayKey(),
       });
+      // If food is already logged today (or any day) when this first runs,
+      // the brand-new habit needs a sync to pick it up immediately — the
+      // same reasoning as the protein-link migration below.
+      Object.keys(s.nutritionLog).forEach((day) => syncNutritionLinks(s, day));
     }
     s.migratedCalorieBudgetV1 = true;
   }
@@ -425,12 +431,39 @@ function normalise(raw) {
      food you log, not an edge case that needs a manual switch. So this
      finds a counter habit that looks like a protein goal by name and links
      it automatically, once. If you don't want that, unlink it from the
-     habit editor afterward and it will not relink itself. */
+     habit editor afterward and it will not relink itself.
+
+     Linking alone isn't enough: a habit like this almost always already
+     carries HAND-TAPPED values from before it was linked — every day you
+     tapped it yourself, sitting in s.log completely disconnected from your
+     food log. Those stale numbers would otherwise sit there unchanged
+     until the next time you happened to edit that day's food, silently
+     disagreeing with the real total the whole time. So every day that has
+     food logged gets resynced right here, immediately, not just today. */
   if (!s.migratedProteinLinkV1) {
     const hab = s.habits.find((h) => h.type === 'scale' && h.inputStyle === 'counter'
       && !h.nutritionLink && h.name.trim().toLowerCase().includes('protein'));
-    if (hab) hab.nutritionLink = 'protein';
+    if (hab) {
+      hab.nutritionLink = 'protein';
+      Object.keys(s.nutritionLog).forEach((day) => syncNutritionLinks(s, day));
+    }
     s.migratedProteinLinkV1 = true;
+  }
+
+  /* ---- one-time migration: catch up anyone already linked under the bug
+     above --------------------------------------------------------------
+     The two migrations above resync the days they touch, but only reason
+     about it going forward — anyone whose device already ran the protein
+     link (or the calorie-budget one) before this fix landed is stuck with
+     whatever stale number was showing at that moment, on every day, until
+     they happen to edit that day's food again. This is the actual fix for
+     that: a blanket resync of every nutrition-linked habit against every
+     day that has food logged, once, regardless of when or how it got
+     linked. Harmless — and a no-op — for anyone whose data was already
+     correct. */
+  if (!s.migratedNutritionResyncV1) {
+    Object.keys(s.nutritionLog).forEach((day) => syncNutritionLinks(s, day));
+    s.migratedNutritionResyncV1 = true;
   }
 
   return s;

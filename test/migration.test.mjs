@@ -109,6 +109,28 @@ console.log('\nCalorie budget migration');
     raw2.habits.filter((h) => h.goalSource === 'tdee').length === 1);
 }
 
+console.log('\nCalorie budget migration: picks up food already logged the same day it runs');
+{
+  const OLD = {
+    version: 1,
+    settings: { tierPercents: [0.25, 0.45, 0.65, 0.8, 0.92], tdee: 2600 },
+    habits: [
+      { id: 'other2', name: 'Training', type: 'binary', weight: 20, threshold: 3, max: 5, archived: false, createdAt: '2026-06-01' },
+    ],
+    log: {},
+    nutritionLog: {
+      '2026-08-18': [{ id: 'f3', name: 'Lunch', calories: 900 }],
+    },
+    meals: [],
+    seen: [],
+  };
+  const blob = new Blob([JSON.stringify(OLD)]);
+  blob.text = async () => JSON.stringify(OLD);
+  const restored = await store.importBackup(blob);
+  const added = restored.habits.find((h) => h.goalSource === 'tdee');
+  ok('the new habit immediately reflects food logged that same day, not "—"', restored.log['2026-08-18']?.[added.id] === 900);
+}
+
 console.log('\nProtein-link migration');
 {
   // A save with the exact starter habit shape: a counter someone has
@@ -135,6 +157,36 @@ console.log('\nProtein-link migration');
 
   const raw2 = JSON.parse(mem['habitforge.v1']);
   ok('migration flag persisted', raw2.migratedProteinLinkV1 === true);
+}
+
+console.log('\nProtein-link migration: a stale hand-tapped value is corrected immediately');
+{
+  // The actual reported bug: someone was hand-tapping a protein counter
+  // AND separately logging real food, so the two numbers disagree — the
+  // habit must show the true food total the instant it links, not keep
+  // showing the leftover hand-tapped number until the next food edit.
+  const OLD = {
+    version: 1,
+    settings: { tierPercents: [0.25, 0.45, 0.65, 0.8, 0.92] },
+    habits: [
+      { id: 'p3', name: 'Protein target', type: 'scale', inputStyle: 'counter', weight: 10, max: 145, threshold: 145, nutritionLink: null, archived: false, createdAt: '2026-06-01' },
+    ],
+    log: { '2026-08-18': { p3: 90 } }, // stale hand-tapped value
+    nutritionLog: {
+      '2026-08-18': [
+        { id: 'f1', name: 'Chicken', calories: 300, protein: 120 },
+        { id: 'f2', name: 'Shake', calories: 200, protein: 89 },
+      ], // real food total: 209g, not 90
+    },
+    meals: [],
+    seen: [],
+  };
+  const blob = new Blob([JSON.stringify(OLD)]);
+  blob.text = async () => JSON.stringify(OLD);
+  const restored = await store.importBackup(blob);
+  ok('the habit is linked', restored.habits.find((h) => h.id === 'p3').nutritionLink === 'protein');
+  ok('its value is corrected to the real food total (209), not left at the stale 90',
+    restored.log['2026-08-18'].p3 === 209);
 }
 
 console.log('\nProtein-link migration: things it correctly leaves alone');
@@ -200,6 +252,58 @@ console.log('\nProtein-link migration: case-insensitive and runs only once');
   const restored2 = await store.importBackup(blob2);
   ok('unlinking it and reloading does not bring the link back — the migration only ever runs once',
     restored2.habits[0].nutritionLink === null);
+}
+
+console.log('\nNutrition resync migration: fixes a device that already linked under the old bug');
+{
+  // This is the actual reported scenario: the habit is ALREADY linked
+  // (migratedProteinLinkV1 already true, so that migration is a no-op
+  // here) but its log value is stale from before the resync fix existed.
+  const OLD = {
+    version: 1,
+    settings: { tierPercents: [0.25, 0.45, 0.65, 0.8, 0.92] },
+    habits: [
+      { id: 'p4', name: 'Protein target', type: 'scale', inputStyle: 'counter', weight: 10, max: 145, threshold: 145, nutritionLink: 'protein', archived: false, createdAt: '2026-06-01' },
+    ],
+    log: { '2026-08-18': { p4: 90 } },
+    nutritionLog: {
+      '2026-08-18': [
+        { id: 'f4', name: 'Chicken', calories: 300, protein: 120 },
+        { id: 'f5', name: 'Shake', calories: 200, protein: 89 },
+      ],
+    },
+    meals: [],
+    seen: [],
+    migratedProteinLinkV1: true, // already migrated, under the old bug
+    // migratedNutritionResyncV1 intentionally absent
+  };
+  const blob = new Blob([JSON.stringify(OLD)]);
+  blob.text = async () => JSON.stringify(OLD);
+  const restored = await store.importBackup(blob);
+  ok('the already-linked habit is corrected to the real total (209), not stuck at 90',
+    restored.log['2026-08-18'].p4 === 209);
+  ok('resync flag persisted so it will not re-run', restored.migratedNutritionResyncV1 === true);
+}
+
+console.log('\nNutrition resync migration: does nothing when data is already correct');
+{
+  const OLD = {
+    version: 1,
+    settings: { tierPercents: [0.25, 0.45, 0.65, 0.8, 0.92] },
+    habits: [
+      { id: 'p5', name: 'Protein target', type: 'scale', inputStyle: 'counter', weight: 10, max: 145, threshold: 145, nutritionLink: 'protein', archived: false, createdAt: '2026-06-01' },
+    ],
+    log: { '2026-08-18': { p5: 120 } }, // already correct
+    nutritionLog: {
+      '2026-08-18': [{ id: 'f6', name: 'Chicken', calories: 300, protein: 120 }],
+    },
+    meals: [],
+    seen: [],
+  };
+  const blob = new Blob([JSON.stringify(OLD)]);
+  blob.text = async () => JSON.stringify(OLD);
+  const restored = await store.importBackup(blob);
+  ok('an already-correct value is left exactly as it was', restored.log['2026-08-18'].p5 === 120);
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
