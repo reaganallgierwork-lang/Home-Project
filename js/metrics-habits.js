@@ -117,7 +117,7 @@ registerSource({
           group: h.name,
           groupIcon: h.icon || h.emoji,
           label: isCounter ? `Amount logged` : 'Rating',
-          unit: isCounter ? (h.unit || '') : '/ 5',
+          unit: isCounter ? (h.unit || '') : `/ ${h.max}`,
           precision: isCounter ? 0 : 1,
           /* A counter's week is naturally "how much per day on average";
              totals are available from the toggle when you want them. */

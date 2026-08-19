@@ -31,12 +31,13 @@
                streak purposes. Points still scale smoothly below it — this
                is only the bar for keeping the streak alive.
      inputStyle (scale habits only)
-               'rating'  = tap a number 1-5, like rating your sleep
+               'rating'  = tap a number 1 to max, like rating your sleep
                'counter' = tap + / - to count up toward a goal, like ounces
                            of water. Needs max (the goal), step (how much
                            each tap adds) and unit.
-     max       (scale habits only) the top of the range — 5 for a rating,
-               or the goal amount for a counter (e.g. 150 for ounces).
+     max       (scale habits only) the top of the range — the scale size for
+               a rating (5 for 1-5, 10 for 1-10, ...), or the goal amount for
+               a counter (e.g. 150 for ounces).
      step      (counter habits only) how much one tap adds, e.g. 8 for an
                8oz cup.
      unit      (counter habits only) shown after the number, e.g. 'oz'.
@@ -46,7 +47,7 @@ export const DEFAULT_HABITS = [
   { name: 'No alcohol',        icon: 'noAlcohol', type: 'binary', weight: 20 },
   { name: 'Training',          icon: 'dumbbell',  type: 'binary', weight: 20 },
   { name: 'McGill Big Three',  icon: 'spine',     type: 'binary', weight: 18 },
-  { name: 'Sleep quality',     icon: 'moon',      type: 'scale',  weight: 12, threshold: 3, inputStyle: 'rating' },
+  { name: 'Sleep quality',     icon: 'moon',      type: 'scale',  weight: 12, max: 10, threshold: 6, inputStyle: 'rating' },
   { name: 'Bible reading',     icon: 'book',      type: 'binary', weight: 10 },
   { name: 'Protein target',    icon: 'utensils',  type: 'binary', weight: 10 },
   /* Hydration counts 8oz cups toward a 150oz daily goal. Each cup is worth

@@ -250,7 +250,9 @@ function renderToday(state) {
         </div>
         <button type="button" class="addset ctr-enter" data-habit="${h.id}">${icon('pencil', 12)} Enter an amount</button>`;
     } else if (h.type === 'scale') {
-      control = `<div class="scale" data-habit="${h.id}">${[1, 2, 3, 4, 5].map((n) => `
+      const scaleMax = h.max || 5;
+      const scaleVals = Array.from({ length: scaleMax }, (_, i) => i + 1);
+      control = `<div class="scale" data-habit="${h.id}">${scaleVals.map((n) => `
           <button data-val="${n}" class="${row.value === n ? `on ${n < h.threshold ? 'low' : ''}` : ''}">${n}</button>`).join('')}</div>`;
     } else {
       control = `<button class="check ${row.success ? 'on' : ''}" data-habit="${h.id}" aria-label="${esc(h.name)}">${icon('check', 22)}</button>`;
@@ -266,10 +268,10 @@ function renderToday(state) {
     const meta = [
       `<span class="${boosted ? 'up' : 'pts'}">${round(row.available)} pts</span>`,
       streakNow > 0 ? `<span class="flame">${icon('flame', 12)}${streakNow}</span>` : '',
-      h.type === 'scale' && h.inputStyle !== 'counter' ? `<span>${row.value ? `rated ${row.value}/5` : 'rate 1–5'}</span>` : '',
+      h.type === 'scale' && h.inputStyle !== 'counter' ? `<span>${row.value ? `rated ${row.value}/${h.max}` : `rate 1–${h.max}`}</span>` : '',
     ].filter(Boolean).join('');
 
-    /* "scaled" wraps both the 1-5 buttons and the counter onto their own
+    /* "scaled" wraps both the rating buttons and the counter onto their own
        row below the name — the same layout need, so they share the class. */
     return `
       <div class="habit ${row.success ? 'done' : ''} ${boosted ? 'boosted' : ''} ${h.type === 'scale' ? 'scaled' : ''}">
@@ -734,7 +736,7 @@ function habitStatusText(h, row, settings) {
     const unitTxt = h.unit ? ` ${h.unit}` : '';
     return `${row.value || 0}${unitTxt} of ${store.effectiveGoal(h, settings)}${unitTxt}`;
   }
-  if (h.type === 'scale') return `Rated ${row.value}/5`;
+  if (h.type === 'scale') return `Rated ${row.value}/${h.max}`;
   return row.success ? 'Done' : 'Not done';
 }
 
@@ -1065,14 +1067,19 @@ function editHabit(id) {
       <label>Type</label>
       <select id="hType">
         <option value="binary" ${kind === 'binary' ? 'selected' : ''}>Did it / didn't (a tick box)</option>
-        <option value="rating" ${kind === 'rating' ? 'selected' : ''}>Rate it 1–5 (like sleep)</option>
+        <option value="rating" ${kind === 'rating' ? 'selected' : ''}>Rate it on a scale (like sleep)</option>
         <option value="counter" ${kind === 'counter' ? 'selected' : ''}>Count up to a goal (like ounces of water)</option>
         <option value="calorieBudget" ${kind === 'calorieBudget' ? 'selected' : ''}>Calorie budget (stay under TDEE − deficit)</option>
       </select>
     </div>
+    <div class="field" id="scaleField" style="display:${kind === 'rating' ? 'block' : 'none'}">
+      <label>Rating scale</label>
+      <input type="number" id="hScaleMax" min="2" max="20" value="${h?.max ?? 5}">
+      <div class="help">Rate it 1 through this number — sleep quality, mood, energy, anything subjective. Change it any time; past ratings keep the scale they were logged on.</div>
+    </div>
     <div class="field" id="thresholdField" style="display:${kind === 'rating' ? 'block' : 'none'}">
       <label>Counts as a good day at</label>
-      <input type="number" id="hThreshold" min="1" max="5" value="${h?.threshold ?? 3}">
+      <input type="number" id="hThreshold" min="1" max="${h?.max ?? 5}" value="${h?.threshold ?? 3}">
       <div class="help">Points always scale smoothly with the rating; this is only the bar for the streak.</div>
     </div>
     <div id="counterFields" style="display:${kind === 'counter' ? 'block' : 'none'}">
@@ -1141,9 +1148,17 @@ function editHabit(id) {
 
   el('hType').onchange = () => {
     const k = el('hType').value;
+    el('scaleField').style.display = k === 'rating' ? 'block' : 'none';
     el('thresholdField').style.display = k === 'rating' ? 'block' : 'none';
     el('counterFields').style.display = k === 'counter' ? 'block' : 'none';
     el('calorieBudgetFields').style.display = k === 'calorieBudget' ? 'block' : 'none';
+  };
+  /* The "good day" bar can't exceed the scale itself — keep its ceiling (and
+     a value left stranded above it) in step as the scale is edited. */
+  el('hScaleMax').oninput = () => {
+    const scaleMax = Math.max(2, Math.min(20, +el('hScaleMax').value || 2));
+    el('hThreshold').max = String(scaleMax);
+    if (+el('hThreshold').value > scaleMax) el('hThreshold').value = String(scaleMax);
   };
   const refreshBudgetPreview = () => {
     const tdee = Math.max(500, +el('hTdee').value || state.settings.tdee);
@@ -1173,9 +1188,10 @@ function editHabit(id) {
         type: 'binary', inputStyle: 'rating', nutritionLink: null, goalSource: 'fixed',
       });
     } else if (k === 'rating') {
+      const scaleMax = Math.max(2, Math.min(20, +el('hScaleMax').value || 5));
       Object.assign(patch, {
-        type: 'scale', inputStyle: 'rating', max: 5, step: 1, unit: '', stepLabel: '', nutritionLink: null, goalSource: 'fixed',
-        threshold: Math.max(1, Math.min(5, +el('hThreshold').value || 3)),
+        type: 'scale', inputStyle: 'rating', max: scaleMax, step: 1, unit: '', stepLabel: '', nutritionLink: null, goalSource: 'fixed',
+        threshold: Math.max(1, Math.min(scaleMax, +el('hThreshold').value || Math.ceil(scaleMax / 2))),
       });
     } else if (k === 'calorieBudget') {
       const tdee = Math.max(500, +el('hTdee').value || state.settings.tdee);

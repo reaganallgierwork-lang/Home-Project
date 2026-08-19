@@ -116,6 +116,7 @@ function freshState() {
     migratedCalorieBudgetV1: true,
     migratedProteinLinkV1: true,
     migratedNutritionResyncV1: true,
+    migratedSleepScaleV1: true,
     /* remembered screen state, e.g. the Data tab's last selection */
     ui: {},
 
@@ -217,6 +218,7 @@ function normalise(raw) {
     migratedCalorieBudgetV1: !!raw.migratedCalorieBudgetV1,
     migratedProteinLinkV1: !!raw.migratedProteinLinkV1,
     migratedNutritionResyncV1: !!raw.migratedNutritionResyncV1,
+    migratedSleepScaleV1: !!raw.migratedSleepScaleV1,
     /* Remembered screen state (which metric the Data tab was showing, etc).
        Purely cosmetic — safe to be missing or stale. */
     ui: raw.ui && typeof raw.ui === 'object' ? raw.ui : {},
@@ -307,7 +309,10 @@ function normalise(raw) {
     weight: Math.max(1, nOr(h.weight, 10)),
     max: Math.max(1, nOr(h.max, 5)),
     step: Math.max(0.01, nOr(h.step, 1)),
-    threshold: Math.max(1, nOr(h.threshold, 3)),
+    /* Clamped against the freshly-normalised max just above, not the raw
+       input — a rating habit's "good day" bar can never sit above its own
+       scale, whatever the scale turns out to be. */
+    threshold: Math.min(Math.max(1, nOr(h.max, 5)), Math.max(1, nOr(h.threshold, 3))),
     archived: !!h.archived,
     archivedAt: DAY_RE.test(h.archivedAt) ? h.archivedAt : null,
     createdAt: DAY_RE.test(h.createdAt) ? h.createdAt : todayKey(),
@@ -466,6 +471,31 @@ function normalise(raw) {
     s.migratedNutritionResyncV1 = true;
   }
 
+  /* ---- one-time migration: rating habits can now use any scale, not just
+     1-5 ---------------------------------------------------------------
+     Sleep quality moves to 1-10 by default, matching what was asked for.
+     Only touches it if it's still sitting at the old fixed 1-5 — a rating
+     habit already edited to a custom scale is left alone. The threshold
+     scales proportionally (3/5 becomes 6/10) so "counts as a good day"
+     keeps the same relative bar rather than becoming trivially easy.
+     Every day already rated on the old scale is rescaled too, doubled and
+     capped at 10 — otherwise a 4/5 night would suddenly read as 4/10, a
+     score drop nobody asked for just from changing the scale. */
+  if (!s.migratedSleepScaleV1) {
+    const hab = s.habits.find((h) => h.type === 'scale' && h.inputStyle === 'rating'
+      && h.max === 5 && h.name.trim().toLowerCase().includes('sleep'));
+    if (hab) {
+      const oldMax = hab.max;
+      hab.max = 10;
+      hab.threshold = Math.min(10, Math.max(1, Math.round((hab.threshold / oldMax) * 10)));
+      Object.keys(s.log).forEach((day) => {
+        const v = s.log[day][hab.id];
+        if (Number.isFinite(v)) s.log[day][hab.id] = Math.min(10, Math.round((v / oldMax) * 10));
+      });
+    }
+    s.migratedSleepScaleV1 = true;
+  }
+
   return s;
 }
 
@@ -542,8 +572,11 @@ export function addHabit(partial) {
     emoji: '',
     type: partial.type === 'scale' ? 'scale' : 'binary',
     weight: +partial.weight || 10,
-    threshold: Number.isFinite(+partial.threshold) ? +partial.threshold : 3,
     max: Number.isFinite(+partial.max) && +partial.max > 0 ? +partial.max : 5,
+    threshold: Math.min(
+      Number.isFinite(+partial.max) && +partial.max > 0 ? +partial.max : 5,
+      Number.isFinite(+partial.threshold) ? +partial.threshold : 3,
+    ),
     step: Number.isFinite(+partial.step) && +partial.step > 0 ? +partial.step : 1,
     unit: partial.unit || '',
     stepLabel: partial.stepLabel || '',

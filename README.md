@@ -101,8 +101,11 @@ Adding a ninth habit doesn't make your days worth more — it just cuts the same
 100 points into more slices. Making "no alcohol" heavier doesn't inflate your
 score; it takes a bigger slice and leaves less for everything else.
 
-Sleep is rated 1–5 and scores proportionally: a 5 earns its full slice, a 3
-earns 60% of it.
+Sleep is rated on a scale (1–10 by default) and scores proportionally: the
+top rating earns its full slice, a rating 60% of the way up earns 60% of it.
+Any "Rate it" habit's scale is yours to set in the habit editor — 1–3, 1–4,
+1–10, whatever suits what you're rating — and the "counts as a good day at"
+bar moves with it.
 
 ### Counting up to a goal
 
@@ -501,7 +504,7 @@ Two honesty details worth knowing:
   quietly reports the wrong number.
 - **A day you didn't log means different things for different metrics.** For
   water or training it counts as zero, because not logging it means it didn't
-  happen — the same rule the scoring uses. For a 1–5 sleep rating it's left out
+  happen — the same rule the scoring uses. For a sleep rating it's left out
   instead, because a night you forgot to rate wasn't a zero-quality night. The
   tab tells you which rule is in force, and always shows how many days you
   actually logged.

@@ -306,5 +306,107 @@ console.log('\nNutrition resync migration: does nothing when data is already cor
   ok('an already-correct value is left exactly as it was', restored.log['2026-08-18'].p5 === 120);
 }
 
+console.log('\nSleep scale migration: existing 1-5 Sleep quality habit moves to 1-10');
+{
+  // The exact starter habit shape (config.js DEFAULT_HABITS), with real
+  // rated history at the old 1-5 scale.
+  const OLD = {
+    version: 1,
+    settings: { tierPercents: [0.25, 0.45, 0.65, 0.8, 0.92] },
+    habits: [
+      { id: 's1', name: 'Sleep quality', icon: 'moon', type: 'scale', inputStyle: 'rating', weight: 12, max: 5, threshold: 3, archived: false, createdAt: '2026-06-01' },
+      { id: 'other1', name: 'Training', type: 'binary', weight: 20, threshold: 3, max: 5, archived: false, createdAt: '2026-06-01' },
+    ],
+    log: {
+      '2026-06-01': { s1: 4, other1: 1 },
+      '2026-06-02': { s1: 2, other1: 1 },
+      '2026-06-03': { other1: 1 }, // sleep simply unrated that day
+    },
+    seen: [],
+  };
+  const blob = new Blob([JSON.stringify(OLD)]);
+  blob.text = async () => JSON.stringify(OLD);
+  const restored = await store.importBackup(blob);
+  const s1 = restored.habits.find((h) => h.id === 's1');
+
+  ok('the scale moves from 5 to 10', s1.max === 10);
+  ok('the "good day" bar scales proportionally (3/5 -> 6/10)', s1.threshold === 6);
+  ok('a past 4/5 rating becomes 8/10, not left at 4', restored.log['2026-06-01'].s1 === 8);
+  ok('a past 2/5 rating becomes 4/10', restored.log['2026-06-02'].s1 === 4);
+  ok('an unrated day is still unrated', !('s1' in restored.log['2026-06-03']));
+  ok('other habits are untouched', restored.habits.find((h) => h.id === 'other1').type === 'binary');
+
+  store.save();
+  const raw2 = JSON.parse(mem['habitforge.v1']);
+  ok('migration flag persisted so it will not re-run', raw2.migratedSleepScaleV1 === true);
+}
+
+console.log('\nSleep scale migration: leaves an already-customised scale alone');
+{
+  const OLD = {
+    version: 1,
+    settings: { tierPercents: [0.25, 0.45, 0.65, 0.8, 0.92] },
+    habits: [
+      // Already moved to a 1-10 scale some other way (e.g. a restored
+      // backup from a device that already ran this migration) — must not
+      // be doubled again.
+      { id: 's2', name: 'Sleep quality', type: 'scale', inputStyle: 'rating', weight: 12, max: 10, threshold: 6, archived: false, createdAt: '2026-06-01' },
+    ],
+    log: { '2026-06-01': { s2: 8 } },
+    seen: [],
+  };
+  const blob = new Blob([JSON.stringify(OLD)]);
+  blob.text = async () => JSON.stringify(OLD);
+  const restored = await store.importBackup(blob);
+  const s2 = restored.habits.find((h) => h.id === 's2');
+  ok('an already 1-10 habit is left exactly as it was', s2.max === 10 && s2.threshold === 6);
+  ok('its logged value is not re-doubled', restored.log['2026-06-01'].s2 === 8);
+}
+
+console.log('\nSleep scale migration: leaves other rating habits alone');
+{
+  const OLD = {
+    version: 1,
+    settings: { tierPercents: [0.25, 0.45, 0.65, 0.8, 0.92] },
+    habits: [
+      { id: 'm1', name: 'Mood', type: 'scale', inputStyle: 'rating', weight: 8, max: 5, threshold: 3, archived: false, createdAt: '2026-06-01' },
+    ],
+    log: { '2026-06-01': { m1: 4 } },
+    seen: [],
+  };
+  const blob = new Blob([JSON.stringify(OLD)]);
+  blob.text = async () => JSON.stringify(OLD);
+  const restored = await store.importBackup(blob);
+  const m1 = restored.habits.find((h) => h.id === 'm1');
+  ok('a rating habit that is not named "sleep" keeps its 1-5 scale', m1.max === 5);
+  ok('its logged value is untouched', restored.log['2026-06-01'].m1 === 4);
+}
+
+console.log('\nConfigurable rating scale: addHabit and normalise honour an arbitrary max');
+{
+  const added = store.addHabit({
+    name: 'Energy', type: 'scale', inputStyle: 'rating', weight: 8, max: 10, threshold: 7,
+  });
+  ok('a new rating habit keeps a custom scale (1-10)', added.max === 10);
+  ok('and its own threshold on that scale', added.threshold === 7);
+
+  const OLD = {
+    version: 1,
+    settings: { tierPercents: [0.25, 0.45, 0.65, 0.8, 0.92] },
+    habits: [
+      // Corrupt data: threshold left over from a larger scale than the
+      // habit now has — normalise() must clamp it, not let it float above.
+      { id: 'e1', name: 'Energy', type: 'scale', inputStyle: 'rating', weight: 8, max: 4, threshold: 9, archived: false, createdAt: '2026-06-01' },
+    ],
+    log: {},
+    seen: [],
+  };
+  const blob = new Blob([JSON.stringify(OLD)]);
+  blob.text = async () => JSON.stringify(OLD);
+  const restored = await store.importBackup(blob);
+  const e1 = restored.habits.find((h) => h.id === 'e1');
+  ok('threshold is clamped down to the habit\'s own max, never above it', e1.threshold === 4);
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

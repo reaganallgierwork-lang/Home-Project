@@ -313,9 +313,9 @@ a { color: var(--gold); }
 /* 1-5 scale picker — drops onto its own full-width row so the buttons stay
    comfortably tappable even on a narrow phone */
 .habit.scaled { flex-wrap: wrap; }
-.scale { display: flex; gap: 6px; width: 100%; margin-top: 4px; }
+.scale { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; margin-top: 4px; }
 .scale button {
-  flex: 1; height: 46px; border-radius: 12px;
+  flex: 1 1 38px; height: 46px; border-radius: 12px;
   border: 1.5px solid var(--line); background: var(--card-2);
   font-weight: 750; font-size: 14px; color: var(--muted);
   transition: all .15s ease;
