@@ -157,6 +157,62 @@ function macroLine(e) {
   return FIELDS.filter((f) => e[f] != null).map((f) => `${Math.round(e[f])}${UNITS[f] || ' kcal'}`).join(' · ') || 'No macros logged';
 }
 
+function dayEntryRowHtml(e) {
+  return `
+    <div class="wcard" data-entry="${esc(e.id)}">
+      <div class="wc-body">
+        <div class="wc-name">${esc(e.name)}</div>
+        <div class="wc-sub">${macroLine(e)}</div>
+      </div>
+      <span class="wc-chev">${icon('chevronRight', 18)}</span>
+    </div>`;
+}
+
+/* ============================================================================
+   "WHAT DID I ACTUALLY EAT" — the meals behind one day's nutrition-linked
+   goal, reachable by tapping that goal on the Today screen (any day, not
+   just today) or a food entry from the History calendar's day detail.
+   Exported so ui.js can wire it to both.
+   ========================================================================== */
+
+/**
+ * @param day     'YYYY-MM-DD' — any day, past or present.
+ * @param redraw  re-renders whatever screen opened this, once something
+ *                inside it (an edit, a new entry) actually changes data.
+ */
+export function openDayMealsSheet(day, redraw) {
+  const state = store.get();
+  const entries = (state.nutritionLog[day] || []).slice().sort((a, b) => a.loggedAt - b.loggedAt);
+  const totals = store.nutritionTotals(day);
+  const dayTxt = day === store.todayKey() ? 'Today' : store.dayLabel(day, { weekday: 'long', month: 'long', day: 'numeric' });
+
+  const close = sheet(`
+    <h3>${esc(dayTxt)}</h3>
+    <div class="lede">${entries.length ? 'What was actually logged this day.' : 'Nothing logged this day yet.'}</div>
+    ${entries.length ? `
+      <div class="tiles" style="margin-bottom:12px">
+        ${FIELDS.map((f) => `<div class="tile"><b>${fmt(totals[f], f)}</b><span>${LABELS[f]}</span></div>`).join('')}
+      </div>
+      <div id="dayMealList">${entries.map((e) => dayEntryRowHtml(e)).join('')}</div>` : `
+      <div class="empty">
+        <div class="big">${icon('utensils', 34)}</div>
+        Nothing logged this day.
+      </div>`}
+    <button class="btn primary" id="dayMealAdd" style="margin-top:${entries.length ? '10px' : '0'}">${icon('utensils', 17)} Log food for this day</button>
+    <button class="btn ghost" id="dayMealClose">Close</button>`);
+
+  document.querySelectorAll('.modal [data-entry]').forEach((row) => {
+    row.onclick = () => {
+      const entry = entries.find((x) => x.id === row.dataset.entry);
+      if (!entry) return;
+      close();
+      openFoodEntrySheet(store.get(), day, entry, redraw);
+    };
+  });
+  el('dayMealAdd').onclick = () => { close(); openFoodEntrySheet(store.get(), day, null, redraw); };
+  el('dayMealClose').onclick = close;
+}
+
 function entryRowHtml(e) {
   return `
     <div class="wcard" data-entry="${esc(e.day)}|${esc(e.id)}">

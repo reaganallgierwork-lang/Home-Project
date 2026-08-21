@@ -28,7 +28,7 @@ import { sessionVolume, sessionSetCount, invalidateRecords } from './workouts.js
 import './metrics-weight.js';          // registers the body-weight metric source
 import { renderWeight, openBodyEntrySheet, openPhotoViewer, showNutritionSection } from './weight.js';
 import './metrics-nutrition.js';       // registers the nutrition metric source
-import { openFoodEntrySheet } from './nutrition.js';
+import { openFoodEntrySheet, openDayMealsSheet } from './nutrition.js';
 import { icon, PICKER_ICONS, hasIcon } from './icons.js';
 import { openSheet as modal } from './sheet.js';
 import { el, esc, toast } from './dom.js';
@@ -223,8 +223,11 @@ function renderToday(state) {
       const amt = row.value;
       const unitTxt = h.unit ? ` ${esc(h.unit)}` : '';
       const goal = store.effectiveGoal(h, state.settings);
+      /* Tapping the readout (any day, not just today) opens what actually
+         got logged — the real meals behind the number, not just the total. */
+      const loggedThisDay = (state.nutritionLog[viewDay] || []).length > 0;
       control = `
-        <div class="counter locked" data-habit="${h.id}">
+        <div class="counter locked" data-daymeals="${viewDay}">
           <button class="ctr-btn minus" disabled aria-hidden="true">${icon('minus', 18)}</button>
           <div class="fill">
             <div class="lbl"><b>${amt == null ? '—' : amt}${amt == null ? '' : unitTxt}</b><span>of ${goal}${unitTxt}</span></div>
@@ -232,7 +235,7 @@ function renderToday(state) {
           </div>
           <button class="ctr-btn plus" disabled aria-hidden="true">${icon('plus', 18)}</button>
         </div>
-        <button type="button" class="addset ctr-food" data-habit="${h.id}">${icon('utensils', 12)} Log food to fill this in</button>`;
+        <button type="button" class="addset ctr-food" data-daymeals="${viewDay}">${icon('utensils', 12)} ${loggedThisDay ? 'See what you logged' : 'Log food to fill this in'}</button>`;
     } else if (h.type === 'scale' && h.inputStyle === 'counter') {
       const amt = row.value || 0;
       const cups = Math.round(amt / (h.step || 1));
@@ -336,13 +339,8 @@ function renderToday(state) {
   document.querySelectorAll('#screen-today .ctr-enter').forEach((b) => {
     b.onclick = () => openCounterEntrySheet(b.dataset.habit);
   });
-  document.querySelectorAll('#screen-today .ctr-food').forEach((b) => {
-    b.onclick = () => {
-      const day = viewDay;
-      showNutritionSection();
-      goToTab('body');
-      openFoodEntrySheet(store.get(), day, null, refresh);
-    };
+  document.querySelectorAll('#screen-today [data-daymeals]').forEach((b) => {
+    b.onclick = () => openDayMealsSheet(b.dataset.daymeals, refresh);
   });
 }
 

@@ -144,7 +144,11 @@ every past day's score) without having to touch the habit itself.
 
 Like every other nutrition-linked counter, it's entirely fed by your food
 log — see the **Nutrition** section under the Body tab — so there's nothing
-to tap by hand, just a **Log food to fill this in** shortcut.
+to tap by hand. Tap the readout itself (on today, or any past day using the
+◀ / ▶ arrows on the Log screen) to see the actual meals behind that number —
+each one opens straight into its edit sheet — rather than just a total with
+nothing behind it. The same day's meals are also listed when you tap that
+date on the **History** calendar.
 
 Scoring: land at or under budget on a given day and that habit earns **full
 credit**, same as any other day it hits its goal — there's no extra reward

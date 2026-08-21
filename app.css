@@ -325,6 +325,9 @@ a { color: var(--gold); }
 
 /* counter habits — tap +/- to count up toward a goal, e.g. cups of water */
 .counter { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 4px; }
+/* A nutrition-linked counter's own +/- are inert, but the readout itself is
+   tappable — it opens the meals actually behind that number. */
+.counter.locked { cursor: pointer; }
 .counter .ctr-btn {
   width: 44px; height: 44px; flex: none; border-radius: 12px;
   border: 1.5px solid var(--line); background: var(--card-2);
