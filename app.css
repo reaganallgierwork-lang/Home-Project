@@ -147,6 +147,10 @@ a { color: var(--gold); }
 
 .screen { display: none; animation: rise .22s ease both; }
 .screen.active { display: block; }
+/* The Log screen doubles as a swipe-to-change-day surface (see
+   wireDaySwipe() in ui.js) — a mouse/trackpad drag across it shouldn't
+   select the page text underneath the gesture. */
+#screen-today { user-select: none; -webkit-user-select: none; }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 .topbar {

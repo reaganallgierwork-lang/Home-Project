@@ -74,6 +74,7 @@ export function start() {
   document.body.insertAdjacentHTML('beforeend', '<div id="toasts"></div><div id="confetti"></div>');
   buildShell();
   bindTabs();
+  wireDaySwipe();
   refresh();
 
   /* If the app is left open overnight, roll to the new day on return. */
@@ -342,6 +343,139 @@ function renderToday(state) {
   document.querySelectorAll('#screen-today [data-daymeals]').forEach((b) => {
     b.onclick = () => openDayMealsSheet(b.dataset.daymeals, refresh);
   });
+}
+
+/* ============================================================================
+   SWIPE BETWEEN DAYS — the ◀ / ▶ arrows work as buttons; this makes the same
+   move available as a left/right drag anywhere on the Log screen, the same
+   "flip a page" gesture as a calendar app. Same touch/pointer arbitration
+   as sheet.js's swipe-to-dismiss (see the long comment there for why touch
+   events, not Pointer Events, drive the phone path) — decide horizontal vs.
+   vertical from the first few pixels of movement, so an ordinary vertical
+   scroll is never swallowed.
+
+   Wired ONCE from start(), not from renderToday() — #screen-today itself
+   survives every re-render (only its innerHTML is replaced each time), so a
+   listener attached to it directly keeps working across every day change. */
+const SWIPE_DECIDE_SLOP = 8;       // px of movement before a direction is judged
+const SWIPE_COMMIT_DISTANCE = 80;  // px
+const SWIPE_COMMIT_VELOCITY = 0.5; // px/ms
+
+function wireDaySwipe() {
+  const panel = el('screen-today');
+  let active = false;   // a touch/drag is currently in progress
+  let decided = false;  // have we judged horizontal vs. vertical yet
+  let dragging = false; // ...and did it turn out to be a day-swipe
+  let startX = 0;
+  let startY = 0;
+  let dx = 0;
+  let prevX = 0;
+  let prevT = 0;
+  let velocity = 0; // px/ms, positive = dragging rightward
+
+  const width = () => panel.getBoundingClientRect().width || window.innerWidth || 1;
+
+  const settle = () => {
+    panel.style.transition = 'transform .22s cubic-bezier(.2,.9,.2,1)';
+    panel.style.transform = '';
+  };
+
+  const begin = (x, y, t) => {
+    active = true;
+    decided = false;
+    dragging = false;
+    dx = 0;
+    velocity = 0;
+    startX = x;
+    startY = y;
+    prevX = x;
+    prevT = t;
+  };
+
+  /** Returns true if the caller should preventDefault (we've taken over). */
+  const move = (x, y, t) => {
+    if (!active) return false;
+    const dyTotal = y - startY;
+    dx = x - startX;
+
+    if (!decided) {
+      if (Math.abs(dx) < SWIPE_DECIDE_SLOP && Math.abs(dyTotal) < SWIPE_DECIDE_SLOP) return false;
+      decided = true;
+      dragging = Math.abs(dx) > Math.abs(dyTotal);
+      if (!dragging) { active = false; return false; }
+      panel.style.transition = 'none';
+    }
+    if (!dragging) return false;
+
+    const dt = Math.max(1, t - prevT);
+    velocity = (x - prevX) / dt;
+    prevX = x;
+    prevT = t;
+
+    /* Dragging left pages forward — can't go past today, so resist hard
+       rather than drag into a day that doesn't exist yet, the same
+       rubber-band feel as a native app hitting an edge. */
+    const blockedNext = dx < 0 && viewDay >= store.todayKey();
+    const eased = blockedNext ? dx * 0.25
+      : (Math.abs(dx) < 120 ? dx : Math.sign(dx) * (120 + (Math.abs(dx) - 120) * 0.3));
+    panel.style.transform = `translateX(${eased}px)`;
+    return true;
+  };
+
+  const end = () => {
+    if (!dragging) { active = false; return; }
+    dragging = false;
+    active = false;
+    const goingNext = dx < 0;
+    if (goingNext && viewDay >= store.todayKey()) { settle(); return; }
+    const committed = Math.abs(dx) > SWIPE_COMMIT_DISTANCE || Math.abs(velocity) > SWIPE_COMMIT_VELOCITY;
+    if (!committed) { settle(); return; }
+
+    /* Slide the current day fully off, swap the data underneath while it's
+       off-screen, then slide the new day in from the opposite edge. */
+    const w = width();
+    panel.style.transition = 'transform .16s ease-in, opacity .16s ease-in';
+    panel.style.transform = `translateX(${goingNext ? -w : w}px)`;
+    panel.style.opacity = '0.4';
+    setTimeout(() => {
+      viewDay = store.addDays(viewDay, goingNext ? 1 : -1);
+      panel.style.transition = 'none';
+      panel.style.transform = `translateX(${goingNext ? w : -w}px)`;
+      renderToday(store.get());
+      requestAnimationFrame(() => {
+        panel.style.transition = 'transform .22s cubic-bezier(.2,.9,.2,1), opacity .22s ease';
+        panel.style.transform = '';
+        panel.style.opacity = '';
+      });
+    }, 160);
+  };
+
+  /* ---- touch: the path that actually runs on the phone ---- */
+  panel.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) { active = false; return; }
+    begin(e.touches[0].clientX, e.touches[0].clientY, e.timeStamp);
+  }, { passive: true });
+
+  panel.addEventListener('touchmove', (e) => {
+    if (e.touches.length !== 1) return;
+    /* Non-passive on purpose: preventDefault here is what stops the browser
+       turning a horizontal drag into a page scroll mid-gesture. */
+    if (move(e.touches[0].clientX, e.touches[0].clientY, e.timeStamp) && e.cancelable) e.preventDefault();
+  }, { passive: false });
+
+  panel.addEventListener('touchend', end);
+  panel.addEventListener('touchcancel', () => { dragging = false; active = false; settle(); });
+
+  /* ---- mouse: no gesture arbitration to race, so this stays simple ---- */
+  panel.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    begin(e.clientX, e.clientY, e.timeStamp);
+  });
+  panel.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    if (move(e.clientX, e.clientY, e.timeStamp)) e.preventDefault();
+  });
+  panel.addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse') end(); });
 }
 
 /** A counter habit's "Enter an amount" sheet — the fast path for a goal

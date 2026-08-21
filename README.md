@@ -519,10 +519,10 @@ or Google Sheets if you want to slice it yourself.
 
 ### Missed a day?
 
-Use the **‹** arrow at the top of the log screen to walk back to any past day
-and fill it in. Streaks, points and tiers all recompute from scratch every
-time, so a late entry genuinely repairs the streak it belonged to — it isn't
-cosmetic.
+Use the **‹** arrow at the top of the log screen — or just swipe left/right
+anywhere on it, like flipping a page — to walk back to any past day and fill
+it in. Streaks, points and tiers all recompute from scratch every time, so a
+late entry genuinely repairs the streak it belonged to — it isn't cosmetic.
 
 ---
 
